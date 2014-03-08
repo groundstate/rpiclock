@@ -1,0 +1,73 @@
+<rpiclock>
+	<!-- The local time zone file is specified relative to /usr/share/zonefinfo and is case-sensitive -->
+	<!-- You must specify if using power saving, since on/off times are defined wrt local time -->
+	<timezone>Australia/Sydney</timezone>
+	<!-- The displayed timescale can be local,UTC,UNIX or GPS -->
+	<timescale>local</timescale>
+	<!-- Time-of-day format when local time is displayed can be "12 hour" or "24 hour" --> 
+	<todformat>12 hour</todformat>
+	<!-- Blink the colons in the display time -->
+	<blink>no</blink>
+	
+	<!-- Text displayed in the first line, describing the timescale -->
+	<banners>
+		<local>Local time</local>
+		<unix>Unix time</unix>
+		<gps>GPS time</gps>
+		<utc>Coordinated Universal Time</utc>
+	</banners>
+	
+	<!-- image that is displayed in the lower lef corner -->
+	<logo>/home/michael/rpiclock/rpiclock.png</logo>
+	
+	<!-- Image files to display in the background. These are presumed to be 1920x1080 -->
+	<!-- Supported formats are png,tiff,jpg -->
+	<background>
+		<default>/home/michael/rpiclock/tardis.jpg</default>
+		<!-- modes are fixed and slideshow -->
+		<mode>fixed</mode>
+		.<!-- path for slideshow images -->
+		<imagepath>/home/michael/images</imagepath>
+		<!-- Events - special dates -->
+		<!-- Define as many as you need -->
+		<event>
+			<startday>4</startday>
+			<!-- Specify month as 1 to 12 -->
+			<startmonth>3</startmonth>
+			<stopday>4</stopday>
+			<stopmonth>3</stopmonth>
+			<image>/home/michael/Desktop/DeLorean-time-machine.jpg</image>
+			<!-- the description can be up to 36 characters or so-->
+			<description>Marty McFly's birthday</description>
+		</event>
+		
+	</background>
+	
+	<power>
+		<!-- Conserve power by switching off at specified times  (yes/no) -->
+		<conserve>no</conserve>
+		<!-- Turn off completely on the weekend (yes/no) -->
+		<weekends>yes</weekends>
+		<!-- power on time, specified in local time in the format HH:MM:SS (24 hour clock, leading zeroes required)-->
+		<on>07:30:00</on>
+		<!-- power off time, specified in local time in the format HH:MM:SS (24 hour clock, leading zeroes required)-->
+		<off>17:30:00</off>
+		<!-- number of minutes that a keypress or mouse event etc will override power saving -->
+		<overridetime>60</overridetime>
+	</power>
+	
+	<!-- The current number of leap seconds is needed in order to display GPS time -->
+	<leapseconds>
+		<!-- if autoupdate==yes then rpiclock will attempt to fetch a file from the url specified below -->
+		<autoupdate>yes</autoupdate>
+		<!-- if autoupdate is on, then the URL is the file to fetch, otherwise it's a local file -->
+		<url>http://somewebsite/leap-seconds.list</url>
+		<proxyserver></proxyserver>
+		<proxyport></proxyport>
+		<proxyuser></proxyuser>
+		<proxypassword></proxypassword>
+		<!-- if autoupdate is on, this is where the leap second file is cached --> 
+		<cachedfile>/home/michael/rpiclock/leap-seconds.list.cache</cachedfile>
+	</leapseconds>
+	
+</rpiclock>

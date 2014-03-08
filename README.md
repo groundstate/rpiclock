@@ -1,5 +1,5 @@
-Compiling
----------
+Installation
+------------
 
 You will need to install Qt4 development packages.
 On the Raspberry Pi, run:
@@ -78,3 +78,8 @@ Known bugs/quirks
 -----------------
 
 The power on/power off logic assumes on < off.
+
+Website
+-------
+
+There's a bit more information and screenshots at [ninepointtwoghz.org](http://ninepointtwoghz.org/rpiclock.php)

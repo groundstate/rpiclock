@@ -34,7 +34,8 @@ int main(int argc, char *argv[])
 {
  
 	QApplication app(argc, argv);
-	TimeDisplay disp;
+	QStringList args = app.arguments(); 
+	TimeDisplay disp(args);
 	disp.show();
 	return app.exec();
 	

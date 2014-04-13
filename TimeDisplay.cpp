@@ -37,6 +37,8 @@
 #include "PowerManager.h"
 #include "TimeDisplay.h"
 
+#define VERSION_INFO "v0.1.1"
+
 #define LEAPSECONDS 16     // whatever's current
 #define GPSEPOCH 315964800 // GPS epoch in the Unix time scale
 #define UNIXEPOCH 0x83aa7e80  //  Unix epoch in the NTP time scale 
@@ -44,16 +46,72 @@
 #define MAXLEAPCHECKINTERVAL 1048576 // two weeks should be good enough
 #define NTPTIMEOUT 64 // waiting time for a NTP response, before declaring no sync
 
-TimeDisplay::TimeDisplay():QWidget()
+TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 {
 
+	fullScreen=true;
+	
+	for (int i=1;i<args.size();i++){ // skip the first
+		if (args.at(i) == "--nofullscreen")
+			fullScreen=false;
+		else if (args.at(i) == "--help"){
+			std::cout << "rpiclock " << std::endl;
+			std::cout << "Usage: rpiclock [options]" << std::endl;
+			std::cout << std::endl;
+			std::cout << "--help         print this help" << std::endl;
+			std::cout << "--license      print this help" << std::endl;
+			std::cout << "--nofullscreen run in a window" << std::endl;
+			std::cout << "--version      display version" << std::endl;
+			
+			exit(EXIT_SUCCESS);
+		}
+		else if (args.at(i) == "--license"){
+			std::cout << " rpiclock - a time display program for the Raspberry Pi/Linux" << std::endl;
+			std::cout <<  std::endl;
+			std::cout << " The MIT License (MIT)" << std::endl;
+			std::cout <<  std::endl;
+			std::cout << " Copyright (c)  2014  Michael J. Wouters" << std::endl;
+			std::cout <<  std::endl; 
+			std::cout << " Permission is hereby granted, free of charge, to any person obtaining a copy" << std::endl;
+			std::cout << " of this software and associated documentation files (the \"Software\"), to deal" << std::endl;
+			std::cout << " in the Software without restriction, including without limitation the rights" << std::endl;
+			std::cout << " to use, copy, modify, merge, publish, distribute, sublicense, and/or sell" << std::endl;
+			std::cout << " copies of the Software, and to permit persons to whom the Software is" << std::endl;
+			std::cout << " furnished to do so, subject to the following conditions:" << std::endl;
+			std::cout << std::endl; 
+			std::cout << " The above copyright notice and this permission notice shall be included in" << std::endl;
+			std::cout << " all copies or substantial portions of the Software." << std::endl;
+			std::cout << std::endl;
+			std::cout << " THE SOFTWARE IS PROVIDED \"AS IS\", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR" << std::endl;
+			std::cout << " IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY," << std::endl;
+			std::cout << " FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE" << std::endl;
+			std::cout << " AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER" << std::endl;
+			std::cout << " LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM," << std::endl;
+			std::cout << " OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN" << std::endl;
+			std::cout << " THE SOFTWARE." << std::endl;
+			
+			exit(EXIT_SUCCESS);
+		}
+		else if (args.at(i) == "--version"){
+			std::cout << "rpiclock " << VERSION_INFO << std::endl;
+			std::cout << std::endl;
+			std::cout << "This ain't no stinkin' Perl script!" << std::endl;
+			
+			exit(EXIT_SUCCESS);
+		}
+		else{
+			std::cout << "rpiclock: Unknown option '"<< args.at(i).toStdString() << "'" << std::endl;
+			std::cout << "rpiclock: Use --help to get a list of available command line options"<< std::endl;
+			
+			exit(EXIT_SUCCESS);
+		}
+	}
+	
 	setWindowTitle(tr("rpiclock"));
-	setMinimumSize(QSize(640,480));
-#ifdef DEBUG
-	setFixedSize(1920,1080);
-#else
-	setWindowState(windowState() ^ Qt::WindowFullScreen);
-	#endif
+	setMinimumSize(QSize(1920,1080));
+	if (fullScreen)
+		setWindowState(windowState() ^ Qt::WindowFullScreen);
+	
 	setMouseTracking(true); // so that mouse movements wake up the display
 	QCursor curs;
 	curs.setShape(Qt::BlankCursor);
@@ -63,10 +121,6 @@ TimeDisplay::TimeDisplay():QWidget()
 	QTime on(9,0,0);
 	QTime off(17,0,0);
 
-	fullScreen=true;
-#ifdef DEBUG
-	fullScreen=false;
-#endif
 	timeScale=Local;
 	TODFormat=hhmmss;
 	dateFormat=PrettyDate;

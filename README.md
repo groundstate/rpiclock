@@ -59,7 +59,7 @@ the wrong time.
 Power management
 ----------------
 
-The `tvservice` tool is used on the Rapsberry Pi. This has worked fine for me on an LCD monitor. The monitor and the backlight go off.
+The `tvservice` tool is used on the Raspberry Pi. This has worked fine for me on an LCD monitor. The display and the backlight go off.
 
 On other Linuxen+x386, YMMV. I tried `dpms` and `vbetool` but there were problems. With `xset`, the backlight would go off briefly and then come back on. With `vbetool`, there were occasional freezes of up to 30s before the monitor turned off. Unfortunately there is no standard way of controlling the monitor in Linux so power management may not work for you.
 
@@ -70,7 +70,7 @@ On Debian systems, `vbetool` needs to run via `sudo` so to disable the password 
 Configuration file
 ------------------
 
-`rpiclock` uses a configuration file `rpiclock.xm`l. The comments in the file should be enough to get you going.
+`rpiclock` uses a configuration file `rpiclock.xml`. The comments in the sample file should be enough to get you going.
 The search path for this is `./:~/rpiclock:~/.rpiclock:/usr/local/etc:/etc`
 All other paths are explicit.
 

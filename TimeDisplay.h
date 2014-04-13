@@ -72,7 +72,7 @@ class TimeDisplay : public QWidget
 
 public:
 
-    TimeDisplay();
+    TimeDisplay(QStringList &);
 
     enum TimeScale  { Local, UTC, Unix, GPS };
     enum TODFormat  {hhmm,hhmmss};

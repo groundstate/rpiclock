@@ -78,7 +78,7 @@ public:
     enum TODFormat  {hhmm,hhmmss};
     enum HourFormat {TwelveHour,TwentyFourHour};
     enum BackgroundMode  {Fixed,Slideshow};
-
+		enum DimmingMethod {Software,VBETool};
 
     enum DateFlags  {ISOdate=0x01,
                      PrettyDate=0x02,
@@ -109,6 +109,9 @@ private slots:
     void toggleSeparatorBlinking();
     void setHHMMTODFormat();
     void setHHMMSSTODFormat();
+		
+		void toggleDimming();
+		
     void quit();
 
     void createContextMenu(const QPoint &);
@@ -126,6 +129,8 @@ private:
     void showTime(QDateTime &);
     void showDate(QDateTime &);
 
+		void updateDimState();
+		
     void setTODFontSize();
     void setDateFontSize();
     void setTitleFontSize();
@@ -133,7 +138,9 @@ private:
 		
     void fetchLeapSeconds();
     void readLeapFile();
-
+		
+		
+		
 		void	writeNTPDatagram();
 		
     void readConfig(QString s);
@@ -171,14 +178,29 @@ private:
     int dateFormat;
     QString timezone;
 
-		QString localTimeBanner,UTCBanner,UnixBanner,GPSBanner;
+    QString localTimeBanner,UTCBanner,UnixBanner,GPSBanner;
 		
     bool blinkSeparator;
     int  blinkDelay;
     QDateTime lastTimeCode;
     QString defaultImage; // the default image
     QString currentImage;
-		QString logoImage;
+    QString logoImage;
+		  
+		//
+		bool dimEnable;
+		int  dimMethod;
+		int  dimLevel;
+		bool dimActive;
+		bool lowLight;
+		QString lightLevelFile;
+		int  dimThreshold;
+		
+		QString fontColourName;
+		QColor  fontColour;
+		QColor  dimFontColour;
+		QImage *dimImage;
+		QImage *dimLogo;
 		
     int backgroundMode;
     QList<CalendarItem *> calendarItems;
@@ -199,6 +221,8 @@ private:
     QActionGroup *hourFormatActionGroup,*TODFormatActionGroup;
 
     QAction *testLeap;
+		QAction *testDimming;
+		
 };
 
 #endif

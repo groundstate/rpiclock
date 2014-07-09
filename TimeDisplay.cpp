@@ -37,7 +37,7 @@
 #include "PowerManager.h"
 #include "TimeDisplay.h"
 
-#define VERSION_INFO "v0.1.1"
+#define VERSION_INFO "v0.1.2"
 
 #define LEAPSECONDS 16     // whatever's current
 #define GPSEPOCH 315964800 // GPS epoch in the Unix time scale
@@ -157,6 +157,17 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	leapFileCheckInterval=8;
 	leapFile = "";
 	
+	dimEnable=true;
+	dimMethod=Software;
+	dimLevel=25;
+	dimActive=false;
+	lowLight=false;
+	dimImage=NULL;
+	lightLevelFile="";
+	dimThreshold=0;
+	
+	fontColourName="white";
+	
 	// Look for a configuration file
 	// The search path is ./:~/rpiclock:~/.rpiclock:/usr/local/etc:/etc
 	
@@ -201,6 +212,12 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	if (!config.isNull())
 		readConfig(config);
 	
+	fontColour=QColor(fontColourName);
+	dimFontColour=fontColour.darker((int) (100*100/dimLevel));
+	QString txtColour;
+	txtColour.sprintf("color:rgba(%d,%d,%d,255)",
+			fontColour.red(),fontColour.green(),fontColour.blue());
+	
 	// Layout is
 	// Top level layout contains the background widget
 	// The overlaying layout is parented to the background widget and consists of a vbox containing
@@ -223,7 +240,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	vb->addLayout(hb);
 	title = new QLabel("",bkground);
 	title->setFont(QFont("Monospace"));
-	title->setStyleSheet("color:white"); // seems weird but this is the recommended way
+	title->setStyleSheet(txtColour); // seems weird but this is the recommended way
 	title->setAlignment(Qt::AlignCenter);
 	hb->addWidget(title);
 
@@ -232,7 +249,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	tod = new QLabel("--:--:--",bkground);
 	tod->setContentsMargins(0,160,0,160);
 	tod->setFont(QFont("Monospace"));
-	tod->setStyleSheet("color:white"); // seems weird but this is the recommended way
+	tod->setStyleSheet(txtColour); // seems weird but this is the recommended way
 	tod->setAlignment(Qt::AlignCenter);
 	hb->addWidget(tod);
 
@@ -241,7 +258,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	vb->addLayout(hb,0);
 	calText = new QLabel("",bkground);
 	calText->setFont(QFont("Monospace"));
-	calText->setStyleSheet("color:white");
+	calText->setStyleSheet(txtColour);
 	calText->setAlignment(Qt::AlignCenter);
 	hb->addWidget(calText,0);
 
@@ -249,7 +266,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	vb->addLayout(hb);
 	date = new QLabel("56337",bkground);
 	date->setFont(QFont("Monospace"));
-	date->setStyleSheet("color:white");
+	date->setStyleSheet(txtColour);
 	date->setAlignment(Qt::AlignCenter);
 	hb->addWidget(date);
 
@@ -259,6 +276,22 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	logo = new QLabel();
 	QPixmap pm = QPixmap(logoImage);
 	logo->setPixmap(pm);
+	dimLogo = new QImage(logoImage);
+	QImage alpha;
+	if (dimLogo->hasAlphaChannel())
+		 alpha = dimLogo->alphaChannel(); // OBSOLETE may break but pixel() does not return alpha in Qt4.6
+	
+	for (int i=0;i<dimLogo->width();i++){
+		for (int j=0;j<dimLogo->height();j++){
+			QColor col = QColor(dimLogo->pixel(i,j));
+			QColor newcol = col.darker((int)(100*100/dimLevel));
+			QRgb val = newcol.rgba();
+			dimLogo->setPixel(i,j,val);
+		}
+	}
+	if (dimLogo->hasAlphaChannel())
+		dimLogo->setAlphaChannel(alpha); // OBSOLETE
+	
 	date->setMinimumHeight(pm.height()+64);
 	hb->addWidget(logo);
 	
@@ -323,6 +356,8 @@ void TimeDisplay::updateTime()
 	updateLeapSeconds();
 	powerManager->update();
 	
+	updateDimState();
+	
 	//struct timex tx;
 	//tx.modes=0; // don't want to set the time
 	//int ret = ntp_adjtime(&tx);
@@ -357,6 +392,49 @@ void TimeDisplay::updateTime()
 		updateTimer->start(1000-now.time().msec());
 	
 	writeNTPDatagram();
+	
+}
+
+void TimeDisplay::updateDimState(){
+	if (!dimEnable) return;
+	
+	// Check the sensor reading
+	QFile lf(lightLevelFile);
+	if (lf.open(QFile::ReadOnly)){
+		QTextStream ts(&lf);
+		int currLightLevel=255;
+		ts >> currLightLevel;
+		lowLight=currLightLevel < dimThreshold;
+	}
+	else	
+		return;
+	
+	if (!dimActive && lowLight){
+		dimActive=true;
+		QString txtColour;
+		txtColour.sprintf("color:rgba(%d,%d,%d,255)",
+				dimFontColour.red(),dimFontColour.green(),dimFontColour.blue());
+		title->setStyleSheet(txtColour);
+		tod->setStyleSheet(txtColour);
+		calText->setStyleSheet(txtColour);
+		date->setStyleSheet(txtColour);
+		bkground->setPixmap(QPixmap::fromImage(*dimImage));
+		logo->setPixmap(QPixmap::fromImage(*dimLogo));
+	}
+	else if (dimActive && !lowLight){
+		dimActive=false;
+		QString txtColour;
+		txtColour.sprintf("color:rgba(%d,%d,%d,255)",
+				fontColour.red(),fontColour.green(),fontColour.blue());
+		title->setStyleSheet(txtColour);
+		tod->setStyleSheet(txtColour);
+		calText->setStyleSheet(txtColour);
+		date->setStyleSheet(txtColour);
+		bkground->setPixmap(QPixmap(currentImage));
+		logo->setPixmap(logoImage);
+	}
+	else if (dimActive && lowLight ){
+	}
 	
 }
 
@@ -492,6 +570,7 @@ void TimeDisplay::createContextMenu(const QPoint &)
 
 	cm->addSeparator();
 	cm->addAction(testLeap);
+	cm->addAction(testDimming);
 	cm->addSeparator();
 	cm->addAction(quitAction);
 	cm->exec(QCursor::pos());
@@ -613,6 +692,11 @@ void TimeDisplay::createActions()
 	testLeap->setStatusTip(tr("Fetch leap second table"));
 	addAction(testLeap);
 	connect(testLeap, SIGNAL(triggered()), this, SLOT(updateLeapSeconds()));
+	
+	testDimming = new QAction(QIcon(), tr("Toggle dimmimg"), this);
+	testDimming->setStatusTip(tr("Toggle dimmimg"));
+	addAction(testDimming);
+	connect(testDimming, SIGNAL(triggered()), this, SLOT(toggleDimming()));
 	
 	quitAction = new QAction(QIcon(), tr("Quit"), this);
 	quitAction->setStatusTip(tr("Quit"));
@@ -794,6 +878,15 @@ void TimeDisplay::setCalTextFontSize()
 	QFont f = calText->font();
 	f.setPointSize(ftod.pointSize()/4);
 	calText->setFont(f);
+}
+
+void TimeDisplay::toggleDimming()
+{
+	lowLight = ! lowLight;
+	if (dimEnable){
+		
+		updateDimState();
+	}
 }
 
 void TimeDisplay::updateLeapSeconds()
@@ -1006,6 +1099,10 @@ void TimeDisplay::readConfig(QString s)
 		}
 		else if (elem.tagName()=="blink")
 			blinkSeparator = (lc =="yes");
+		else if (elem.tagName()=="fontcolour"){
+			lc=elem.text();
+			fontColourName=lc.simplified();
+		}		
 		else if (elem.tagName()=="logo")
 			logoImage=elem.text();
 		else if (elem.tagName()=="background")
@@ -1103,6 +1200,37 @@ void TimeDisplay::readConfig(QString s)
 				}
 				celem=celem.nextSiblingElement();
 			}
+			
+		}
+		else if (elem.tagName()=="dimming"){
+			QDomElement celem=elem.firstChildElement();
+			
+			while(!celem.isNull())
+			{
+				QString lc=celem.text().toLower();
+				lc=lc.simplified();
+				lc=lc.remove('"');
+				if (celem.tagName() == "enable"){
+					dimEnable= (lc=="yes");
+				}
+				else if (celem.tagName() == "method"){
+					if (lc=="vbetool")
+						dimMethod=VBETool;
+					else if (lc=="software")
+						dimMethod=Software;
+				}
+				else if (celem.tagName() == "level"){
+					dimLevel=celem.text().trimmed().toInt();
+				}
+				else if (celem.tagName() == "file"){
+					lightLevelFile=celem.text().trimmed();
+				}
+				else if (celem.tagName() == "threshold"){
+					dimThreshold=celem.text().trimmed().toInt();
+				}
+				celem=celem.nextSiblingElement();
+			}
+			
 		}
 		elem=elem.nextSiblingElement();
 	}
@@ -1223,6 +1351,24 @@ void TimeDisplay::setBackground()
 		setPlainBackground();
 	else{
 		bkground->setStyleSheet("* {background-color:rgba(0,0,0,0)}");
+		if (dimEnable){
+			// calculate and cache the dimmed image
+			if (NULL != dimImage)
+				delete dimImage;
+			dimImage = new QImage(currentImage);
+			for (int i=0;i<dimImage->width();i++){
+				for (int j=0;j<dimImage->height();j++){
+					QColor col = QColor(dimImage->pixel(i,j));
+					QColor newcol = col.darker((int)(100*100/dimLevel));
+					QRgb val = newcol.rgb();
+					dimImage->setPixel(i,j,val);
+				}
+			}
+			if (dimActive && lowLight){
+				bkground->setPixmap(QPixmap::fromImage(*dimImage));
+				return;
+			}
+		}
 		bkground->setPixmap(QPixmap(currentImage));
 	}
 	

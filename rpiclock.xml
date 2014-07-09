@@ -18,12 +18,14 @@
 	</banners>
 	
 	<!-- image that is displayed in the lower lef corner -->
-	<logo>/home/michael/rpiclock/rpiclock.png</logo>
+	<logo>/home/michael/.rpiclock/rpiclock.png</logo>
+	<!-- any named color like #rrggbb, X11 colour, or WWWW SVG colour eg gainsboro,steelblue -->
+	<fontcolour>#000000</fontcolour>
 	
 	<!-- Image files to display in the background. These are presumed to be 1920x1080 -->
 	<!-- Supported formats are png,tiff,jpg -->
 	<background>
-		<default>/home/michael/rpiclock/tardis.jpg</default>
+		<default>/home/michael/.rpiclock/tardis.jpg</default>
 		<!-- modes are fixed and slideshow -->
 		<mode>fixed</mode>
 		.<!-- path for slideshow images -->
@@ -45,21 +47,34 @@
 	
 	<power>
 		<!-- Conserve power by switching off at specified times  (yes/no) -->
-		<conserve>no</conserve>
+		<conserve>yes</conserve>
 		<!-- Turn off completely on the weekend (yes/no) -->
 		<weekends>yes</weekends>
 		<!-- power on time, specified in local time in the format HH:MM:SS (24 hour clock, leading zeroes required)-->
-		<on>07:30:00</on>
+		<on>18:02:00</on>
 		<!-- power off time, specified in local time in the format HH:MM:SS (24 hour clock, leading zeroes required)-->
 		<off>17:30:00</off>
 		<!-- number of minutes that a keypress or mouse event etc will override power saving -->
 		<overridetime>60</overridetime>
 	</power>
 	
+	<dimming>
+		<enable>yes</enable>
+		<!-- available methods vbetool/software -->
+		<method>software</method>
+		<!-- brightness level 0 to 100 -->
+		<level>25</level>
+		<!-- File to read light level from. It is expected that a separate process writes a number 0..255 to this file -->
+		<!-- 0 is minimum light, 255 maximum light -->
+		<file>/home/michael/.rpiclock/lightlevel</file>
+		<!-- threshold for dimming the display, 0..255 -->
+		<threshold>128</threshold>
+	</dimming>
+	
 	<!-- The current number of leap seconds is needed in order to display GPS time -->
 	<leapseconds>
 		<!-- if autoupdate==yes then rpiclock will attempt to fetch a file from the url specified below -->
-		<autoupdate>yes</autoupdate>
+		<autoupdate>no</autoupdate>
 		<!-- if autoupdate is on, then the URL is the file to fetch, otherwise it's a local file -->
 		<url>http://somewebsite/leap-seconds.list</url>
 		<proxyserver></proxyserver>
@@ -67,7 +82,7 @@
 		<proxyuser></proxyuser>
 		<proxypassword></proxypassword>
 		<!-- if autoupdate is on, this is where the leap second file is cached --> 
-		<cachedfile>/home/michael/rpiclock/leap-seconds.list.cache</cachedfile>
+		<cachedfile>/home/michael/.rpiclock/leap-seconds.list.cache</cachedfile>
 	</leapseconds>
 	
 </rpiclock>

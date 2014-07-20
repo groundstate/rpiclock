@@ -139,11 +139,13 @@ private:
     void fetchLeapSeconds();
     void readLeapFile();
 		
-		
+		void checkConfigFile();
+		void setWidgetStyleSheet();
+		void setLogoImages();
 		
 		void	writeNTPDatagram();
 		
-    void readConfig(QString s);
+    bool readConfig(QString s);
 		void readBackgroundConfig(QDomElement);
 		void setPlainBackground();
 		QString pickCalendarImage();
@@ -153,6 +155,9 @@ private:
 
     PowerManager   *powerManager;
 
+		QString configFile;
+		QDateTime configLastModified;
+		
 		bool autoUpdateLeapFile;
 		QString leapFileURL;
 		QString proxyServer;
@@ -209,9 +214,14 @@ private:
 		int lastHour; // for tracking day rollover
     bool fullScreen;
 
+		// Track a few things which might change if the config file is re-readBackground
+		bool logoChanged;
+		bool reloadBackgroundImage;
+		
     QNetworkAccessManager *netManager;
     QTimer  *updateTimer;
     QLabel  *bkground,*title,*tod,*date,*logo,*img,*calText;
+		QWidget *logoParentWidget;
     QAction *toggleFullScreenAction,*localTimeAction,*UnixTimeAction,*GPSTimeAction,*UTCTimeAction;
     QAction *twelveHourFormatAction,*twentyFourHourFormatAction;
     QAction *sepBlinkingOnAction,*HHMMSSFormatAction,*HHMMFormatAction;

@@ -135,6 +135,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	imagePath = "";
 	calItemText="";
 	logoImage="";
+	dimLogo=NULL;
 	
 	localTimeBanner="Local time";
 	UTCBanner="Coordinated Universal Time";
@@ -172,13 +173,13 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	// The search path is ./:~/rpiclock:~/.rpiclock:/usr/local/etc:/etc
 	
 	QFileInfo fi;
-	QString config;
+
 	QString s("./rpiclock.xml");
 	fi.setFile(s);
 	if (fi.isReadable())
-		config=s;
+		configFile=s;
 	
-	if (config.isNull()){
+	if (configFile.isNull()){
 		char *eptr = getenv("HOME");
 		QString home("./");
 		if (eptr)
@@ -186,37 +187,31 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 		s=home+"/rpiclock/rpiclock.xml";
 		fi.setFile(s);
 		if (fi.isReadable())
-			config=s;
-		if (config.isNull()){
+			configFile=s;
+		if (configFile.isNull()){
 			s=home+"/.rpiclock/rpiclock.xml";
 			fi.setFile(s);
 			if (fi.isReadable())
-				config=s;
+				configFile=s;
 		}
 	}
 	
-	if (config.isNull()){
+	if (configFile.isNull()){
 		s="/usr/local/etc/rpiclock.xml";
 		fi.setFile(s);
 		if (fi.isReadable())
-			config=s;
+			configFile=s;
 	}
 	
-	if (config.isNull()){
+	if (configFile.isNull()){
 		s="/etc/rpiclock.xml";
 		fi.setFile(s);
 		if (fi.isReadable())
-			config=s;
+			configFile=s;
 	}
 	
-	if (!config.isNull())
-		readConfig(config);
-	
-	fontColour=QColor(fontColourName);
-	dimFontColour=fontColour.darker((int) (100*100/dimLevel));
-	QString txtColour;
-	txtColour.sprintf("color:rgba(%d,%d,%d,255)",
-			fontColour.red(),fontColour.green(),fontColour.blue());
+	if (!configFile.isNull())
+		readConfig(configFile);
 	
 	// Layout is
 	// Top level layout contains the background widget
@@ -240,7 +235,6 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	vb->addLayout(hb);
 	title = new QLabel("",bkground);
 	title->setFont(QFont("Monospace"));
-	title->setStyleSheet(txtColour); // seems weird but this is the recommended way
 	title->setAlignment(Qt::AlignCenter);
 	hb->addWidget(title);
 
@@ -249,7 +243,6 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	tod = new QLabel("--:--:--",bkground);
 	tod->setContentsMargins(0,160,0,160);
 	tod->setFont(QFont("Monospace"));
-	tod->setStyleSheet(txtColour); // seems weird but this is the recommended way
 	tod->setAlignment(Qt::AlignCenter);
 	hb->addWidget(tod);
 
@@ -258,7 +251,6 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	vb->addLayout(hb,0);
 	calText = new QLabel("",bkground);
 	calText->setFont(QFont("Monospace"));
-	calText->setStyleSheet(txtColour);
 	calText->setAlignment(Qt::AlignCenter);
 	hb->addWidget(calText,0);
 
@@ -266,33 +258,16 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	vb->addLayout(hb);
 	date = new QLabel("56337",bkground);
 	date->setFont(QFont("Monospace"));
-	date->setStyleSheet(txtColour);
 	date->setAlignment(Qt::AlignCenter);
 	hb->addWidget(date);
 
-	QWidget *w= new QWidget(date);
-	hb=new QHBoxLayout(w);
+	setWidgetStyleSheet();
+	
+	logoParentWidget= new QWidget(date);
+	hb=new QHBoxLayout(logoParentWidget);
 	hb->setContentsMargins(32,32,32,32);
 	logo = new QLabel();
-	QPixmap pm = QPixmap(logoImage);
-	logo->setPixmap(pm);
-	dimLogo = new QImage(logoImage);
-	QImage alpha;
-	if (dimLogo->hasAlphaChannel())
-		 alpha = dimLogo->alphaChannel(); // OBSOLETE may break but pixel() does not return alpha in Qt4.6
-	
-	for (int i=0;i<dimLogo->width();i++){
-		for (int j=0;j<dimLogo->height();j++){
-			QColor col = QColor(dimLogo->pixel(i,j));
-			QColor newcol = col.darker((int)(100*100/dimLevel));
-			QRgb val = newcol.rgba();
-			dimLogo->setPixel(i,j,val);
-		}
-	}
-	if (dimLogo->hasAlphaChannel())
-		dimLogo->setAlphaChannel(alpha); // OBSOLETE
-	
-	date->setMinimumHeight(pm.height()+64);
+	setLogoImages();
 	hb->addWidget(logo);
 	
 	createActions();
@@ -306,11 +281,11 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 		case UTC:setUTCTime();break;
 	}
 	
-	setBackground();
-	
 	timezone.prepend(":");
 	setenv("TZ",timezone.toStdString().c_str(),1);
 	tzset();
+	
+	setBackground();
 	
 	netManager = new QNetworkAccessManager(this);
 	if (proxyServer != "" && proxyPort != -1)
@@ -391,6 +366,7 @@ void TimeDisplay::updateTime()
 	else
 		updateTimer->start(1000-now.time().msec());
 	
+	checkConfigFile();
 	writeNTPDatagram();
 	
 }
@@ -1044,17 +1020,19 @@ void TimeDisplay::readLeapFile()
 }
 
 
-void TimeDisplay::readConfig(QString s)
+bool TimeDisplay::readConfig(QString s)
 {
 	QDomDocument doc;
 	
 	qDebug() << "Using configuration file " << s;
 	
+	logoChanged=false;
+	
 	QFile f(s);
 	if ( !f.open( QIODevice::ReadOnly) )
 	{
 		qWarning() << "Can't open " << s;
-		return;
+		return false;
 	}
 	
 	QString err;
@@ -1063,7 +1041,7 @@ void TimeDisplay::readConfig(QString s)
 	{	
 		qWarning() << "PARSE ERROR " << err << " line=" << errlineno;
 		f.close();
-		return ;
+		return false;
 	}
 	f.close();
 	
@@ -1103,8 +1081,12 @@ void TimeDisplay::readConfig(QString s)
 			lc=elem.text();
 			fontColourName=lc.simplified();
 		}		
-		else if (elem.tagName()=="logo")
-			logoImage=elem.text();
+		else if (elem.tagName()=="logo"){
+			if (elem.text() != logoImage){
+				logoImage=elem.text();
+				logoChanged=true;
+			}
+		}
 		else if (elem.tagName()=="background")
 			readBackgroundConfig(elem.firstChildElement());
 		else if (elem.tagName()=="power")
@@ -1243,7 +1225,84 @@ void TimeDisplay::readConfig(QString s)
 		qDebug() << "leap file URL is now " << leapFileURL;
 		leapFile = leapFileURL;
 	}
+	
+	return true;
 }
+
+void TimeDisplay::checkConfigFile(){
+	
+	QFileInfo fi = QFileInfo(configFile);
+	if (fi.lastModified() > configLastModified){
+		qDebug() << "TimeDisplay::checkConfigFile()";
+		configLastModified = fi.lastModified();
+		if (readConfig(configFile)){
+			setWidgetStyleSheet();
+			setLogoImages();
+			
+			switch (timeScale){
+				case Local:setLocalTime();break;
+				case GPS:setGPSTime();break;
+				case Unix:setUnixTime();break;
+				case UTC:setUTCTime();break;
+			}
+	
+			timezone.prepend(":");
+			setenv("TZ",timezone.toStdString().c_str(),1);
+			tzset();
+			
+			setBackground();
+
+		}
+	}
+}
+
+void TimeDisplay::setWidgetStyleSheet()
+{
+	// mainly to execute changes in the config file 
+	fontColour=QColor(fontColourName);
+	dimFontColour=fontColour.darker((int) (100*100/dimLevel));
+	QString txtColour;
+	txtColour.sprintf("color:rgba(%d,%d,%d,255)",
+			fontColour.red(),fontColour.green(),fontColour.blue());
+	
+	title->setStyleSheet(txtColour); // seems weird but this is the recommended way
+	tod->setStyleSheet(txtColour); // seems weird but this is the recommended way
+	calText->setStyleSheet(txtColour);
+	date->setStyleSheet(txtColour);
+
+}
+
+void TimeDisplay::setLogoImages()
+{  
+	if (logoChanged){
+		
+		qDebug() << "TimeDisplay::setLogoImages() changed";
+		QPixmap pm = QPixmap(logoImage);
+		logo->setPixmap(pm);
+		
+		if (dimLogo) delete dimLogo;
+		
+		dimLogo = new QImage(logoImage);
+		QImage alpha;
+		if (dimLogo->hasAlphaChannel())
+			alpha = dimLogo->alphaChannel(); // OBSOLETE may break but pixel() does not return alpha in Qt4.6
+		
+		for (int i=0;i<dimLogo->width();i++){
+			for (int j=0;j<dimLogo->height();j++){
+				QColor col = QColor(dimLogo->pixel(i,j));
+				QColor newcol = col.darker((int)(100*100/dimLevel));
+				QRgb val = newcol.rgba();
+				dimLogo->setPixel(i,j,val);
+			}
+		}
+		if (dimLogo->hasAlphaChannel())
+			dimLogo->setAlphaChannel(alpha); // OBSOLETE
+			
+		date->setMinimumHeight(pm.height()+64);
+		//logoParentWidget->setFixedSize(pm.width(),pm.height());
+	}
+	
+}		
 
 void	TimeDisplay::writeNTPDatagram()
 {
@@ -1269,21 +1328,40 @@ void	TimeDisplay::writeNTPDatagram()
 void TimeDisplay::readBackgroundConfig(QDomElement elem)
 {
 	QString lc;
+	
+	reloadBackgroundImage=false;
+	
+	QString currCalImage=pickCalendarImage();
+	
+	while (!calendarItems.isEmpty())
+		delete calendarItems.takeFirst();
+
 	while (!elem.isNull())
 	{
 		qDebug() << elem.tagName() << " " << elem.text();
-		if (elem.tagName() == "default")
+		if (elem.tagName() == "default"){
+			if  (elem.text() != defaultImage)
+				reloadBackgroundImage=true;
 			defaultImage = elem.text().trimmed();
+			QFileInfo fi = QFileInfo(defaultImage);
+			if (!fi.exists())
+				defaultImage="";
+		}
 		else if (elem.tagName() == "mode"){
 			lc=elem.text().toLower();
 			lc=lc.simplified();
+			int oldMode=backgroundMode;
 			if (lc == "fixed")
 				backgroundMode = Fixed;
 			else if (lc == "slideshow")
 				backgroundMode = Slideshow;
+			if( oldMode != backgroundMode)
+				reloadBackgroundImage=true;
 		}
 		else if (elem.tagName() == "imagepath"){
 			lc=elem.text();
+			if (lc != imagePath)
+				reloadBackgroundImage=true;
 			imagePath=lc;
 		}
 		else if (elem.tagName() == "event"){
@@ -1320,10 +1398,21 @@ void TimeDisplay::readBackgroundConfig(QDomElement elem)
 		elem=elem.nextSiblingElement();
 	}
 	
+	// since calendar image overrides, a simple test of whether the current image is the same as that according to the calendar
+	// is enough
+	QString im=pickCalendarImage();
+	if (im != currCalImage ){
+		calItemText=""; // in case there is now no calendar item
+		reloadBackgroundImage = true;
+	}
 }
 
 void TimeDisplay::setBackground()
 {
+	if (!reloadBackgroundImage) return;
+	
+	qDebug() << "TimeDisplay::setBackground()";
+	
 	QString im="";
 	
 	switch (backgroundMode){
@@ -1344,8 +1433,7 @@ void TimeDisplay::setBackground()
 		currentImage=im;
 	}
 	
-	if (calItemText.isEmpty())
-			calText->setVisible(false);
+	calText->setVisible(!(calItemText.isEmpty()));
 	
 	if (currentImage.isEmpty())
 		setPlainBackground();
@@ -1387,9 +1475,14 @@ QString TimeDisplay::pickCalendarImage()
 		// Take care here with leap years - presumably specifying Feb 29 on a non-leap year results in an invalid date
 		if (start.isValid() && stop.isValid() && stop >= start){
 			if (today >= start && today <= stop){
-				res = ci->image;
 				qDebug() << "Picked " << ci->image;
-				calItemText=ci->description;
+				QFileInfo fi = QFileInfo(ci->image);
+				if (fi.exists()){
+					res = ci->image;
+					calItemText=ci->description;
+				}
+				else
+					res="";
 				return res;
 			}
 		}

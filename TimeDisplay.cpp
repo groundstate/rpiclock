@@ -118,56 +118,13 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	setCursor(curs);
 	cursor().setPos(0,0);
 	
+	setDefaults();
+	
 	QTime on(9,0,0);
 	QTime off(17,0,0);
-
-	timeScale=Local;
-	TODFormat=hhmmss;
-	dateFormat=PrettyDate;
-	blinkSeparator=false;
-	blinkDelay=500;
-	leapSeconds = LEAPSECONDS;
-	hourFormat=TwelveHour;
-	timezone="Australia/Sydney";
-	
-	defaultImage="";
-	backgroundMode = Fixed;
-	imagePath = "";
-	calItemText="";
-	logoImage="";
-	dimLogo=NULL;
-	
-	localTimeBanner="Local time";
-	UTCBanner="Coordinated Universal Time";
-	UnixBanner="Unix time";
-	GPSBanner="GPS time";
 	
 	powerManager=new PowerManager(on,off);
 	powerManager->enable(false);
-	
-	autoUpdateLeapFile=false;
-	leapFileURL=""; // no default so as to be kind to eg NIST !
-	proxyServer="";
-	proxyPort=-1;
-	proxyUser="";
-	proxyPassword="";
-	
-	leapsInitialized=false;
-	leapFileExpiry= QDateTime(QDate(1970,1,1),QTime(0,0,0));
-	lastLeapFileFetch=leapFileExpiry;
-	leapFileCheckInterval=8;
-	leapFile = "";
-	
-	dimEnable=true;
-	dimMethod=Software;
-	dimLevel=25;
-	dimActive=false;
-	lowLight=false;
-	dimImage=NULL;
-	lightLevelFile="";
-	dimThreshold=0;
-	
-	fontColourName="white";
 	
 	// Look for a configuration file
 	// The search path is ./:~/rpiclock:~/.rpiclock:/usr/local/etc:/etc
@@ -587,6 +544,54 @@ void	TimeDisplay::readNTPDatagram()
 //
 //
 //
+
+void TimeDisplay::setDefaults()
+{
+	timeScale=Local;
+	TODFormat=hhmmss;
+	dateFormat=PrettyDate;
+	blinkSeparator=false;
+	blinkDelay=500;
+	leapSeconds = LEAPSECONDS;
+	hourFormat=TwelveHour;
+	timezone="Australia/Sydney";
+	
+	defaultImage="";
+	backgroundMode = Fixed;
+	imagePath = "";
+	calItemText="";
+	logoImage="";
+	dimLogo=NULL;
+	
+	localTimeBanner="Local time";
+	UTCBanner="Coordinated Universal Time";
+	UnixBanner="Unix time";
+	GPSBanner="GPS time";
+	
+	autoUpdateLeapFile=false;
+	leapFileURL=""; // no default so as to be kind to eg NIST !
+	proxyServer="";
+	proxyPort=-1;
+	proxyUser="";
+	proxyPassword="";
+	
+	leapsInitialized=false;
+	leapFileExpiry= QDateTime(QDate(1970,1,1),QTime(0,0,0));
+	lastLeapFileFetch=leapFileExpiry;
+	leapFileCheckInterval=8;
+	leapFile = "";
+	
+	dimEnable=true;
+	dimMethod=Software;
+	dimLevel=25;
+	dimActive=false;
+	lowLight=false;
+	dimImage=NULL;
+	lightLevelFile="";
+	dimThreshold=0;
+	
+	fontColourName="white";
+}
 
 void TimeDisplay::createActions()
 {
@@ -1022,6 +1027,12 @@ void TimeDisplay::readLeapFile()
 
 bool TimeDisplay::readConfig(QString s)
 {
+	
+	proxyServer="";
+	proxyPort=-1;
+	proxyUser="";
+	proxyPassword="";
+	
 	QDomDocument doc;
 	
 	qDebug() << "Using configuration file " << s;
@@ -1251,7 +1262,28 @@ void TimeDisplay::checkConfigFile(){
 			tzset();
 			
 			setBackground();
-
+			
+			if (proxyServer != "" && proxyPort != -1){ // need minimal config for proxy server
+				
+				if (NULL==netManager){ // may have just configured it 
+					netManager = new QNetworkAccessManager(this);
+					netManager->setProxy(QNetworkProxy(QNetworkProxy::HttpProxy,proxyServer,proxyPort,proxyUser,proxyPassword)); // UNTESTED
+					connect(netManager, SIGNAL(finished(QNetworkReply*)),
+						this, SLOT(replyFinished(QNetworkReply*)));
+				}
+				else{ // valid new config and currently configured 
+					QNetworkProxy np = netManager->proxy();
+					if (np.hostName() != proxyServer || np.port() != proxyPort ||
+							np.user() != proxyUser || np.password() !=  proxyPassword){ // if it ch         ed
+						delete netManager;
+						netManager = new QNetworkAccessManager(this);
+						netManager->setProxy(QNetworkProxy(QNetworkProxy::HttpProxy,proxyServer,proxyPort,proxyUser,proxyPassword)); // UNTESTED
+						connect(netManager, SIGNAL(finished(QNetworkReply*)),
+							this, SLOT(replyFinished(QNetworkReply*)));
+					}
+				}
+			}
+			
 		}
 	}
 }

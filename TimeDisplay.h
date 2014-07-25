@@ -123,6 +123,8 @@ private slots:
 		
 private:
 
+		void setDefaults();
+		
     void createActions();
     void updateActions();
 

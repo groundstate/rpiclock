@@ -49,6 +49,8 @@
 TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 {
 
+	srandom(currentDateTime().toTime_t());
+	
 	fullScreen=true;
 	
 	for (int i=1;i<args.size();i++){ // skip the first
@@ -167,8 +169,11 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 			configFile=s;
 	}
 	
-	if (!configFile.isNull())
+	if (!configFile.isNull()){
+		QFileInfo fi = QFileInfo(configFile);
+		configLastModified=fi.lastModified();
 		readConfig(configFile);
+	}
 	
 	// Layout is
 	// Top level layout contains the background widget
@@ -242,7 +247,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	setenv("TZ",timezone.toStdString().c_str(),1);
 	tzset();
 	
-	setBackground();
+	updateBackgroundImage(true); // force the first one
 	
 	netManager = new QNetworkAccessManager(this);
 	if (proxyServer != "" && proxyPort != -1)
@@ -259,9 +264,8 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 						 
 	updateTimer = new QTimer(this);
 	connect(updateTimer,SIGNAL(timeout()),this,SLOT(updateTime()));
-	QDateTime now = QDateTime::currentDateTime();
+	QDateTime now = currentDateTime();
 	updateTimer->start(1000-now.time().msec()); // don't try to get the first blink right
-	lastHour=now.time().hour(); 
 
 }
 
@@ -290,18 +294,9 @@ void TimeDisplay::updateTime()
 	
 	updateDimState();
 	
-	//struct timex tx;
-	//tx.modes=0; // don't want to set the time
-	//int ret = ntp_adjtime(&tx);
+	QDateTime now = currentDateTime();
 	
-	QDateTime now = QDateTime::currentDateTime();
-	
-	// Each day, just after midnight, check whether the background image should be changed
-	//if (lastHour != now.time().minute() && backgroundMode != Fixed){ // FIXME
-	if (lastHour > now.time().hour() && backgroundMode != Fixed)
-		setBackground();	
-	
-	lastHour = now.time().hour(); 
+	updateBackgroundImage(false);
 	
 	syncOK = syncOK && (lastNTPReply.secsTo(now)< NTPTIMEOUT); 
 	
@@ -460,17 +455,14 @@ void TimeDisplay::set24HourFormat()
 {
 	hourFormat=TwentyFourHour;
 }
-
-		
-void TimeDisplay::setPlainBackground()
-{
 	
-	//bkground->setStyleSheet("QLabel#Background {background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
-	//												 "stop: 0 #3c001e, stop: 0.2 #500130,"
-  //                         "stop: 0.8 #500130, stop: 1.0 #3c001e)}");
-	bkground->setStyleSheet("QLabel#Background {background-color:rgba(80,1,48,255)}");
-	bkground->setPixmap(QPixmap(""));
-	defaultImage="";
+
+void TimeDisplay::setTimeOffset()
+{
+	bool ok;
+	int ret = QInputDialog::getInt(this,"Time offset","Set time offset in minutes",timeOffset,0,1440*3,1,&ok);
+	if (ok)
+		timeOffset=ret;
 }
 
 void TimeDisplay::quit()
@@ -503,7 +495,7 @@ void TimeDisplay::createContextMenu(const QPoint &)
 
 	cm->addSeparator();
 	cm->addAction(testLeap);
-	cm->addAction(testDimming);
+	cm->addAction(offsetTime);
 	cm->addSeparator();
 	cm->addAction(quitAction);
 	cm->exec(QCursor::pos());
@@ -536,9 +528,9 @@ void	TimeDisplay::readNTPDatagram()
 	ntpSocket->readDatagram(data.data(), data.size());
 	unsigned int u1 = ntohl(*reinterpret_cast<const int*>(data.data()));
 	unsigned int b4=(u1 & 0xff000000)>>24; 
-	qDebug() << "reply li="<< ((b4 >> 6) & 0x03) << " vn=" << ((b4 >>3) & 0x07);
+	//qDebug() << "reply li="<< ((b4 >> 6) & 0x03) << " vn=" << ((b4 >>3) & 0x07);
 	syncOK = ((b4 >> 6) & 0x03) != 3;
-	lastNTPReply=QDateTime::currentDateTime();
+	lastNTPReply=currentDateTime();
 }
 
 //
@@ -562,6 +554,7 @@ void TimeDisplay::setDefaults()
 	calItemText="";
 	logoImage="";
 	dimLogo=NULL;
+	slideshowPeriod=1;
 	
 	localTimeBanner="Local time";
 	UTCBanner="Coordinated Universal Time";
@@ -591,6 +584,8 @@ void TimeDisplay::setDefaults()
 	dimThreshold=0;
 	
 	fontColourName="white";
+	
+	timeOffset=0; // for debugging
 }
 
 void TimeDisplay::createActions()
@@ -674,10 +669,10 @@ void TimeDisplay::createActions()
 	addAction(testLeap);
 	connect(testLeap, SIGNAL(triggered()), this, SLOT(updateLeapSeconds()));
 	
-	testDimming = new QAction(QIcon(), tr("Toggle dimmimg"), this);
-	testDimming->setStatusTip(tr("Toggle dimmimg"));
-	addAction(testDimming);
-	connect(testDimming, SIGNAL(triggered()), this, SLOT(toggleDimming()));
+	offsetTime = new QAction(QIcon(), tr("Set time offset"), this);
+	offsetTime->setStatusTip(tr("Set time offset"));
+	addAction(offsetTime);
+	connect(offsetTime, SIGNAL(triggered()), this, SLOT(setTimeOffset()));
 	
 	quitAction = new QAction(QIcon(), tr("Quit"), this);
 	quitAction->setStatusTip(tr("Quit"));
@@ -861,14 +856,6 @@ void TimeDisplay::setCalTextFontSize()
 	calText->setFont(f);
 }
 
-void TimeDisplay::toggleDimming()
-{
-	lowLight = ! lowLight;
-	if (dimEnable){
-		
-		updateDimState();
-	}
-}
 
 void TimeDisplay::updateLeapSeconds()
 {
@@ -881,7 +868,7 @@ void TimeDisplay::updateLeapSeconds()
 	// expiry and fetch a new file
 	//
 	
-	QDateTime now = QDateTime::currentDateTime();
+	QDateTime now = currentDateTime();
 	
 	if (autoUpdateLeapFile){
 		if (!leapsInitialized){
@@ -903,7 +890,7 @@ void TimeDisplay::updateLeapSeconds()
 				fetchLeapSeconds();
 			}
 			else{ // have an up to date file so extract the current leap value
-				QDateTime now = QDateTime::currentDateTime();
+				QDateTime now = currentDateTime();
 				unsigned int ttnow = now.toTime_t();
 	
 				for (int i=leapTable.size()-1;i>=0;i--){
@@ -938,12 +925,12 @@ void TimeDisplay::updateLeapSeconds()
 
 void TimeDisplay::fetchLeapSeconds()
 {
-	QDateTime now = QDateTime::currentDateTime();
+	QDateTime now = currentDateTime();
 	qDebug() << lastLeapFileFetch.secsTo(now);
 	if (lastLeapFileFetch.secsTo(now) > leapFileCheckInterval){
 		qDebug() << "fetching leap second file " << leapFileURL ;
 		netManager->get(QNetworkRequest(QUrl(leapFileURL)));
-		lastLeapFileFetch = QDateTime::currentDateTime();
+		lastLeapFileFetch = currentDateTime();
 		leapFileCheckInterval *= 2;
 		if (leapFileCheckInterval >  MAXLEAPCHECKINTERVAL)
 			leapFileCheckInterval = MAXLEAPCHECKINTERVAL;
@@ -1006,7 +993,7 @@ void TimeDisplay::readLeapFile()
 	QFileInfo fi(leapFile);
 	leapFileLastModified=fi.lastModified();
 	
-	QDateTime now = QDateTime::currentDateTime();
+	QDateTime now = currentDateTime();
 	unsigned int ttnow = now.toTime_t();
 	
 	for (int i=leapTable.size()-1;i>=0;i--)
@@ -1061,7 +1048,6 @@ bool TimeDisplay::readConfig(QString s)
 
 	while (!elem.isNull())
 	{
-		qDebug() << elem.tagName() << " " << elem.text();
 		lc=elem.text().toLower();
 		lc=lc.simplified();
 		lc=lc.remove('"');
@@ -1069,7 +1055,6 @@ bool TimeDisplay::readConfig(QString s)
 			timezone=elem.text().simplified();
 		else if (elem.tagName()=="timescale")
 		{
-			qDebug() << elem.tagName() << " " << lc;
 			if (lc=="local")
 				timeScale=Local;
 			else if (lc=="utc")
@@ -1109,17 +1094,13 @@ bool TimeDisplay::readConfig(QString s)
 				lc=lc.simplified();
 				lc=lc.remove('"');
 				if (celem.tagName() == "conserve")
-				{
 					powerManager->enable(lc == "yes");
-					qDebug() << "power::conserve=" << lc;
-				}
 				else if (celem.tagName() == "weekends")
 				{
 					if (lc=="yes") 
 						powerManager->setPolicy(PowerManager::NightTime | PowerManager::Weekends);
 					else
 						powerManager->setPolicy(PowerManager::NightTime);
-					qDebug() << "power::weekends=" << lc;
 				}
 				else if (celem.tagName() == "on")
 				{
@@ -1140,7 +1121,6 @@ bool TimeDisplay::readConfig(QString s)
 				else if (celem.tagName() == "overridetime")
 				{
 					powerManager->setOverrideTime(celem.text().toInt());
-					qDebug() << "power::overridetime=" << lc;
 				}
 				celem=celem.nextSiblingElement();
 			}
@@ -1261,7 +1241,7 @@ void TimeDisplay::checkConfigFile(){
 			setenv("TZ",timezone.toStdString().c_str(),1);
 			tzset();
 			
-			setBackground();
+			if (backgroundChanged) updateBackgroundImage(true);
 			
 			if (proxyServer != "" && proxyPort != -1){ // need minimal config for proxy server
 				
@@ -1361,7 +1341,7 @@ void TimeDisplay::readBackgroundConfig(QDomElement elem)
 {
 	QString lc;
 	
-	reloadBackgroundImage=false;
+	backgroundChanged=false;
 	
 	QString currCalImage=pickCalendarImage();
 	
@@ -1370,10 +1350,10 @@ void TimeDisplay::readBackgroundConfig(QDomElement elem)
 
 	while (!elem.isNull())
 	{
-		qDebug() << elem.tagName() << " " << elem.text();
+		//qDebug() << elem.tagName() << " " << elem.text();
 		if (elem.tagName() == "default"){
 			if  (elem.text() != defaultImage)
-				reloadBackgroundImage=true;
+				backgroundChanged=true;
 			defaultImage = elem.text().trimmed();
 			QFileInfo fi = QFileInfo(defaultImage);
 			if (!fi.exists())
@@ -1388,13 +1368,19 @@ void TimeDisplay::readBackgroundConfig(QDomElement elem)
 			else if (lc == "slideshow")
 				backgroundMode = Slideshow;
 			if( oldMode != backgroundMode)
-				reloadBackgroundImage=true;
+				backgroundChanged=true;
 		}
 		else if (elem.tagName() == "imagepath"){
 			lc=elem.text();
 			if (lc != imagePath)
-				reloadBackgroundImage=true;
+				backgroundChanged=true;
 			imagePath=lc;
+		}
+		else if (elem.tagName() == "slideshowperiod"){
+			int oldSlideshowPeriod=slideshowPeriod;
+			slideshowPeriod=elem.text().toInt();
+			if (oldSlideshowPeriod != slideshowPeriod)
+				backgroundChanged=true;
 		}
 		else if (elem.tagName() == "event"){
 			CalendarItem *calItem = new CalendarItem();
@@ -1435,40 +1421,66 @@ void TimeDisplay::readBackgroundConfig(QDomElement elem)
 	QString im=pickCalendarImage();
 	if (im != currCalImage ){
 		calItemText=""; // in case there is now no calendar item
-		reloadBackgroundImage = true;
+		backgroundChanged = true;
 	}
 }
 
-void TimeDisplay::setBackground()
+void TimeDisplay::setBackgroundFromCalendar()
 {
-	if (!reloadBackgroundImage) return;
-	
-	qDebug() << "TimeDisplay::setBackground()";
-	
-	QString im="";
-	
-	switch (backgroundMode){
-		case Fixed:
-			im=defaultImage;
-			break;
-		case Slideshow:
-			im = pickSlideShowImage();
-			break;
-	}
-	
-	currentImage = im;
-	
-	// Calendar events override everything else
-	im = pickCalendarImage();
+	calItemText="";
+	QString im = pickCalendarImage();
 	if (!im.isEmpty()){
 		calText->setText(calItemText);	
 		currentImage=im;
 	}
-	
 	calText->setVisible(!(calItemText.isEmpty()));
+}
+
+void TimeDisplay::setBackgroundFromSlideShow()
+{
+	currentImage=pickSlideShowImage();
+	nextSlideUpdate=currentDateTime();
+	int secs = nextSlideUpdate.time().minute()*60 +  nextSlideUpdate.time().second();
+	nextSlideUpdate=nextSlideUpdate.addSecs(3600*slideshowPeriod-secs);
+}
+
+
+void TimeDisplay::updateBackgroundImage(bool force)
+{
 	
-	if (currentImage.isEmpty())
-		setPlainBackground();
+	bool updateImage=force;
+	QDateTime now = currentDateTime();
+	
+	if (force){
+		qDebug() << "Forcing image update";
+		currentImage=defaultImage; // if a calendar item has become inactive, then this (and the next line) puts us in the right state
+		if (backgroundMode == Slideshow)
+			setBackgroundFromSlideShow();
+		setBackgroundFromCalendar(); // this overrides everything
+	}
+	else{ // determine whether the backgound image must be updated
+		QString im=currentImage;
+		if (backgroundMode==Fixed)
+			currentImage=defaultImage;
+		if (backgroundMode == Slideshow && (now > nextSlideUpdate)){
+			setBackgroundFromSlideShow();
+		}
+		setBackgroundFromCalendar();
+		updateImage = (im != currentImage);
+	}
+	
+	lastBackgroundCheck = now;
+	
+	if (!updateImage) return;
+	
+	if (currentImage.isEmpty()){
+		//bkground->setStyleSheet("QLabel#Background {background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
+	//												 "stop: 0 #3c001e, stop: 0.2 #500130,"
+  //                         "stop: 0.8 #500130, stop: 1.0 #3c001e)}");
+		bkground->setStyleSheet("QLabel#Background {background-color:rgba(80,1,48,255)}");
+		bkground->setPixmap(QPixmap(""));
+		defaultImage="";
+	}
 	else{
 		bkground->setStyleSheet("* {background-color:rgba(0,0,0,0)}");
 		if (dimEnable){
@@ -1496,8 +1508,9 @@ void TimeDisplay::setBackground()
 
 QString TimeDisplay::pickCalendarImage()
 {
+	
 	QString res="";
-	QDate today=QDate::currentDate();
+	QDate today=currentDateTime().date();
 	
 	for (int i=0;i<calendarItems.length();++i){
 		CalendarItem *ci = calendarItems.at(i);
@@ -1507,7 +1520,7 @@ QString TimeDisplay::pickCalendarImage()
 		// Take care here with leap years - presumably specifying Feb 29 on a non-leap year results in an invalid date
 		if (start.isValid() && stop.isValid() && stop >= start){
 			if (today >= start && today <= stop){
-				qDebug() << "Picked " << ci->image;
+				qDebug() << "Picked calendar image" << ci->image;
 				QFileInfo fi = QFileInfo(ci->image);
 				if (fi.exists()){
 					res = ci->image;
@@ -1519,6 +1532,7 @@ QString TimeDisplay::pickCalendarImage()
 			}
 		}
 	}
+	
 	return res;
 }
 
@@ -1531,13 +1545,18 @@ QString TimeDisplay::pickSlideShowImage()
 	QStringList filters;
 	filters << "*.png" << "*.jpeg" << "*.jpg" << "*.tiff" << "*.bmp";
 	QFileInfoList imList=imPath.entryInfoList(filters,QDir::Files|QDir::Readable);
-	for (int i=0;i<imList.length();i++)
-		qDebug() << imList.at(i).absoluteFilePath();
 	if (imList.length()==0) return res;
 	
 	int r = trunc(imList.length()*(double) (random())/(double) (RAND_MAX));
 	if (r==imList.length()) r=imList.length()-1;
 	res= imList.at(r).absoluteFilePath();
-	
+	qDebug() << "Picked slide show image " << res;
 	return res;
+}
+
+QDateTime TimeDisplay::currentDateTime(){
+	// This is for debugging - it allows us to add some extra time to the current time to force events
+	QDateTime now = QDateTime::currentDateTime();
+	now=now.addSecs(timeOffset*60);
+	return now;
 }

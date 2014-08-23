@@ -110,8 +110,6 @@ private slots:
     void setHHMMTODFormat();
     void setHHMMSSTODFormat();
 		
-		void toggleDimming();
-		
     void quit();
 
     void createContextMenu(const QPoint &);
@@ -120,6 +118,8 @@ private slots:
     void replyFinished(QNetworkReply*);
 
 		void readNTPDatagram();
+		
+		void setTimeOffset();
 		
 private:
 
@@ -149,12 +149,16 @@ private:
 		
     bool readConfig(QString s);
 		void readBackgroundConfig(QDomElement);
-		void setPlainBackground();
+		
+		void setBackgroundFromCalendar();
+		void setBackgroundFromSlideShow();
+    void updateBackgroundImage(bool force = false);
+		
 		QString pickCalendarImage();
 		QString pickSlideShowImage();
 		
-    void setBackground();
-
+		QDateTime currentDateTime();
+		
     PowerManager   *powerManager;
 
 		QString configFile;
@@ -193,7 +197,8 @@ private:
     QString defaultImage; // the default image
     QString currentImage;
     QString logoImage;
-		  
+		int slideshowPeriod; // in hours
+		
 		//
 		bool dimEnable;
 		int  dimMethod;
@@ -213,12 +218,13 @@ private:
     QList<CalendarItem *> calendarItems;
     QString imagePath;
 		QString calItemText;
-		int lastHour; // for tracking day rollover
+		QDateTime lastBackgroundCheck;
+		QDateTime nextSlideUpdate; 
     bool fullScreen;
 
-		// Track a few things which might change if the config file is re-readBackground
+		// Track a few things which might change if the config file is re-read
 		bool logoChanged;
-		bool reloadBackgroundImage;
+		bool backgroundChanged;
 		
     QNetworkAccessManager *netManager;
     QTimer  *updateTimer;
@@ -233,8 +239,9 @@ private:
     QActionGroup *hourFormatActionGroup,*TODFormatActionGroup;
 
     QAction *testLeap;
-		QAction *testDimming;
+		QAction *offsetTime;
 		
+		int timeOffset; // in minutes
 };
 
 #endif

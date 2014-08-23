@@ -3,9 +3,9 @@
 	<!-- You must specify if using power saving, since on/off times are defined wrt local time -->
 	<timezone>Australia/Sydney</timezone>
 	<!-- The displayed timescale can be local,UTC,UNIX or GPS -->
-	<timescale>local</timescale>
+	<timescale>Local</timescale>
 	<!-- Time-of-day format when local time is displayed can be "12 hour" or "24 hour" --> 
-	<todformat>12 hour</todformat>
+	<todformat>24 hour</todformat>
 	<!-- Blink the colons in the display time -->
 	<blink>no</blink>
 	
@@ -17,28 +17,30 @@
 		<utc>Coordinated Universal Time</utc>
 	</banners>
 	
-	<!-- image that is displayed in the lower lef corner -->
+	<!-- image that is displayed in the lower left corner -->
 	<logo>/home/michael/.rpiclock/rpiclock.png</logo>
 	<!-- any named color like #rrggbb, X11 colour, or WWWW SVG colour eg gainsboro,steelblue -->
-	<fontcolour>#000000</fontcolour>
+	<fontcolour>#ffffff</fontcolour>
 	
 	<!-- Image files to display in the background. These are presumed to be 1920x1080 -->
 	<!-- Supported formats are png,tiff,jpg -->
 	<background>
 		<default>/home/michael/.rpiclock/tardis.jpg</default>
 		<!-- modes are fixed and slideshow -->
-		<mode>fixed</mode>
+		<mode>slideshow</mode>
+		<!-- number of hours a slide is displayed for -->
+		<slideshowperiod>2</slideshowperiod>
 		.<!-- path for slideshow images -->
-		<imagepath>/home/michael/images</imagepath>
+		<imagepath>/home/michael/Pictures/Physicists</imagepath>
 		<!-- Events - special dates -->
 		<!-- Define as many as you need -->
 		<event>
-			<startday>4</startday>
+			<startday>24</startday>
 			<!-- Specify month as 1 to 12 -->
-			<startmonth>3</startmonth>
-			<stopday>4</stopday>
-			<stopmonth>3</stopmonth>
-			<image>/home/michael/Desktop/DeLorean-time-machine.jpg</image>
+			<startmonth>8</startmonth>
+			<stopday>24</stopday>
+			<stopmonth>8</stopmonth>
+			<image>/home/michael/Pictures/Physicists/MarieCurie.jpg</image>
 			<!-- the description can be up to 36 characters or so-->
 			<description>Marty McFly's birthday</description>
 		</event>
@@ -47,11 +49,11 @@
 	
 	<power>
 		<!-- Conserve power by switching off at specified times  (yes/no) -->
-		<conserve>yes</conserve>
+		<conserve>no</conserve>
 		<!-- Turn off completely on the weekend (yes/no) -->
 		<weekends>yes</weekends>
 		<!-- power on time, specified in local time in the format HH:MM:SS (24 hour clock, leading zeroes required)-->
-		<on>18:02:00</on>
+		<on>07:30:00</on>
 		<!-- power off time, specified in local time in the format HH:MM:SS (24 hour clock, leading zeroes required)-->
 		<off>17:30:00</off>
 		<!-- number of minutes that a keypress or mouse event etc will override power saving -->
@@ -62,7 +64,7 @@
 		<enable>yes</enable>
 		<!-- available methods vbetool/software -->
 		<method>software</method>
-		<!-- brightness level 0 to 100 -->
+		<!-- brightness level of the dimmed image : 0 to 100 -->
 		<level>25</level>
 		<!-- File to read light level from. It is expected that a separate process writes a number 0..255 to this file -->
 		<!-- 0 is minimum light, 255 maximum light -->

@@ -194,14 +194,14 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	vb->setContentsMargins(0,0,0,0);
 
 	QHBoxLayout * hb = new QHBoxLayout();
-	vb->addLayout(hb);
+	vb->addLayout(hb,1);
 	title = new QLabel("",bkground);
 	title->setFont(QFont("Monospace"));
 	title->setAlignment(Qt::AlignCenter);
 	hb->addWidget(title);
 
 	hb = new QHBoxLayout();
-	vb->addLayout(hb);
+	vb->addLayout(hb,1);
 	tod = new QLabel("--:--:--",bkground);
 	tod->setContentsMargins(0,160,0,160);
 	tod->setFont(QFont("Monospace"));
@@ -217,17 +217,26 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	hb->addWidget(calText,0);
 
 	hb = new QHBoxLayout();
-	vb->addLayout(hb);
+	vb->addLayout(hb,1);
 	date = new QLabel("56337",bkground);
 	date->setFont(QFont("Monospace"));
 	date->setAlignment(Qt::AlignCenter);
 	hb->addWidget(date);
 
+	hb = new QHBoxLayout();
+	hb->setContentsMargins(32,0,32,12);
+	vb->addLayout(hb,0);
+	imageInfo = new QLabel("Credit",bkground);
+	imageInfo->setFont(QFont("Monospace"));
+	imageInfo->setAlignment(Qt::AlignRight);
+	hb->addWidget( imageInfo);
+	if (!showImageInfo) imageInfo->hide();
+	
 	setWidgetStyleSheet();
 	
 	logoParentWidget= new QWidget(date);
 	hb=new QHBoxLayout(logoParentWidget);
-	hb->setContentsMargins(32,32,32,32);
+	hb->setContentsMargins(32,32,32,0);
 	logo = new QLabel();
 	setLogoImages();
 	hb->addWidget(logo);
@@ -346,6 +355,7 @@ void TimeDisplay::updateDimState(){
 		tod->setStyleSheet(txtColour);
 		calText->setStyleSheet(txtColour);
 		date->setStyleSheet(txtColour);
+		imageInfo->setStyleSheet(txtColour);
 		bkground->setPixmap(QPixmap::fromImage(*dimImage));
 		logo->setPixmap(QPixmap::fromImage(*dimLogo));
 	}
@@ -358,6 +368,7 @@ void TimeDisplay::updateDimState(){
 		tod->setStyleSheet(txtColour);
 		calText->setStyleSheet(txtColour);
 		date->setStyleSheet(txtColour);
+		imageInfo->setStyleSheet(txtColour);
 		bkground->setPixmap(QPixmap(currentImage));
 		logo->setPixmap(logoImage);
 	}
@@ -374,6 +385,7 @@ void TimeDisplay::toggleFullScreen()
 	setDateFontSize();
 	setTitleFontSize();
 	setCalTextFontSize();
+	setImageCreditFontSize();
 }
 
 void TimeDisplay::setLocalTime()
@@ -386,6 +398,7 @@ void TimeDisplay::setLocalTime()
 	setDateFontSize();
 	setTitleFontSize();
 	setCalTextFontSize();
+	setImageCreditFontSize();
 	updateActions();
 }
 
@@ -399,6 +412,7 @@ void TimeDisplay::setUTCTime()
 	setDateFontSize();
 	setTitleFontSize();
 	setCalTextFontSize();
+	setImageCreditFontSize();
 	updateActions();
 }
 
@@ -411,6 +425,7 @@ void TimeDisplay::setUnixTime()
 	setDateFontSize();
 	setTitleFontSize();
 	setCalTextFontSize();
+	setImageCreditFontSize();
 	updateActions();
 }
 
@@ -423,6 +438,7 @@ void TimeDisplay::setGPSTime()
 	setDateFontSize();
 	setTitleFontSize();
 	setCalTextFontSize();
+	setImageCreditFontSize();
 	updateActions();
 }
 
@@ -555,6 +571,7 @@ void TimeDisplay::setDefaults()
 	logoImage="";
 	dimLogo=NULL;
 	slideshowPeriod=1;
+	showImageInfo=true;
 	
 	localTimeBanner="Local time";
 	UTCBanner="Coordinated Universal Time";
@@ -856,6 +873,13 @@ void TimeDisplay::setCalTextFontSize()
 	calText->setFont(f);
 }
 
+void TimeDisplay::setImageCreditFontSize()
+{
+	QFont ftod = tod->font();
+	QFont f = imageInfo->font();
+	f.setPointSize(ftod.pointSize()/12);
+	imageInfo->setFont(f);
+}
 
 void TimeDisplay::updateLeapSeconds()
 {
@@ -1281,7 +1305,7 @@ void TimeDisplay::setWidgetStyleSheet()
 	tod->setStyleSheet(txtColour); // seems weird but this is the recommended way
 	calText->setStyleSheet(txtColour);
 	date->setStyleSheet(txtColour);
-
+	imageInfo->setStyleSheet(txtColour);
 }
 
 void TimeDisplay::setLogoImages()
@@ -1376,9 +1400,15 @@ void TimeDisplay::readBackgroundConfig(QDomElement elem)
 				backgroundChanged=true;
 			imagePath=lc;
 		}
+		else if (elem.tagName() == "showinfo"){
+			lc=elem.text().toLower();
+			showImageInfo = (lc == "yes");
+		}
 		else if (elem.tagName() == "slideshowperiod"){
 			int oldSlideshowPeriod=slideshowPeriod;
 			slideshowPeriod=elem.text().toInt();
+			if (slideshowPeriod < 1)
+				slideshowPeriod=1;
 			if (oldSlideshowPeriod != slideshowPeriod)
 				backgroundChanged=true;
 		}
@@ -1502,6 +1532,7 @@ void TimeDisplay::updateBackgroundImage(bool force)
 			}
 		}
 		bkground->setPixmap(QPixmap(currentImage));
+		imageInfo->setText(makeImageInfo(currentImage));
 	}
 	
 }
@@ -1552,6 +1583,26 @@ QString TimeDisplay::pickSlideShowImage()
 	res= imList.at(r).absoluteFilePath();
 	qDebug() << "Picked slide show image " << res;
 	return res;
+}
+
+QString TimeDisplay::makeImageInfo(QString &fname)
+{
+	// Parses the image filename into a formatted string
+	// The image file name should be in the format AUTHOR__TITLE__whatever
+	// Anything before the first separator is taken to be the AUTHOR
+	// If the second separator is missing, then the title is left blank
+	QString info="";
+	QFileInfo fi(fname);
+	QStringList tmp=fi.baseName().split("__");
+	qDebug() << tmp;
+	if (2==tmp.size()){ // Author only
+		info=tmp.at(0);
+	}
+	else if (3==tmp.size()){
+		info=tmp.at(0)+" - "+tmp.at(1);
+	}
+	qDebug() << info;
+	return info;
 }
 
 QDateTime TimeDisplay::currentDateTime(){

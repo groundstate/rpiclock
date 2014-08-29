@@ -137,6 +137,7 @@ private:
     void setDateFontSize();
     void setTitleFontSize();
 		void setCalTextFontSize();
+		void setImageCreditFontSize();
 		
     void fetchLeapSeconds();
     void readLeapFile();
@@ -156,6 +157,8 @@ private:
 		
 		QString pickCalendarImage();
 		QString pickSlideShowImage();
+		
+		QString makeImageInfo(QString &);
 		
 		QDateTime currentDateTime();
 		
@@ -221,14 +224,15 @@ private:
 		QDateTime lastBackgroundCheck;
 		QDateTime nextSlideUpdate; 
     bool fullScreen;
-
+		bool showImageInfo;
+		
 		// Track a few things which might change if the config file is re-read
 		bool logoChanged;
 		bool backgroundChanged;
 		
     QNetworkAccessManager *netManager;
     QTimer  *updateTimer;
-    QLabel  *bkground,*title,*tod,*date,*logo,*img,*calText;
+    QLabel  *bkground,*title,*tod,*date,*logo,*img,*calText,*imageInfo;
 		QWidget *logoParentWidget;
     QAction *toggleFullScreenAction,*localTimeAction,*UnixTimeAction,*GPSTimeAction,*UTCTimeAction;
     QAction *twelveHourFormatAction,*twentyFourHourFormatAction;

@@ -25,13 +25,18 @@
 	<!-- Image files to display in the background. These are presumed to be 1920x1080 -->
 	<!-- Supported formats are png,tiff,jpg -->
 	<background>
-		<default>/home/michael/.rpiclock/tardis.jpg</default>
+		<default>/home/michael/.rpiclock/Jeayese__Flying Tardis__001.jpg</default>
 		<!-- modes are fixed and slideshow -->
-		<mode>slideshow</mode>
+		<mode>fixed</mode>
 		<!-- number of hours a slide is displayed for -->
 		<slideshowperiod>2</slideshowperiod>
 		.<!-- path for slideshow images -->
 		<imagepath>/home/michael/Pictures/Physicists</imagepath>
+		<!-- show image  info -->
+		<!-- These are parsed from the file name -->
+		<!-- These should be in the format AUTHOR__TITLE__whatever.ext -->
+		<!-- The title is optional -->
+		<showinfo>yes</showinfo>
 		<!-- Events - special dates -->
 		<!-- Define as many as you need -->
 		<event>
@@ -61,7 +66,7 @@
 	</power>
 	
 	<dimming>
-		<enable>yes</enable>
+		<enable>no</enable>
 		<!-- available methods vbetool/software -->
 		<method>software</method>
 		<!-- brightness level of the dimmed image : 0 to 100 -->

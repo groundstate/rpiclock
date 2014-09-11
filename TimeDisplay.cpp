@@ -304,9 +304,7 @@ void TimeDisplay::updateTime()
 	updateDimState();
 	
 	QDateTime now = currentDateTime();
-	
-	updateBackgroundImage(false);
-	
+	int sbef = now.time().second();
 	syncOK = syncOK && (lastNTPReply.secsTo(now)< NTPTIMEOUT); 
 	
 	if (syncOK){
@@ -317,6 +315,11 @@ void TimeDisplay::updateTime()
 		tod->setText("--:--:--");
 		date->setText("Unsynchronised");
 	}
+	// Call repaint on tod and date ??
+	
+	updateBackgroundImage(false);
+	
+	now = currentDateTime();
 	
 	if (blinkSeparator){
 		if (now.time().msec() < blinkDelay) 
@@ -1503,6 +1506,17 @@ void TimeDisplay::updateBackgroundImage(bool force)
 	
 	if (!updateImage) return;
 	
+	if (syncOK){
+		showTime(now);
+		showDate(now);
+	}
+	else{
+		tod->setText("--:--:--");
+		date->setText("Unsynchronised");
+	}
+	tod->repaint();
+	date->repaint();
+
 	if (currentImage.isEmpty()){
 		//bkground->setStyleSheet("QLabel#Background {background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
 	//												 "stop: 0 #3c001e, stop: 0.2 #500130,"
@@ -1534,7 +1548,7 @@ void TimeDisplay::updateBackgroundImage(bool force)
 		bkground->setPixmap(QPixmap(currentImage));
 		imageInfo->setText(makeImageInfo(currentImage));
 	}
-	
+
 }
 
 QString TimeDisplay::pickCalendarImage()

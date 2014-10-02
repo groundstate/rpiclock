@@ -37,7 +37,7 @@
 #include "PowerManager.h"
 #include "TimeDisplay.h"
 
-#define VERSION_INFO "v0.1.2"
+#define VERSION_INFO "v0.1.3"
 
 #define LEAPSECONDS 16     // whatever's current
 #define GPSEPOCH 315964800 // GPS epoch in the Unix time scale
@@ -301,10 +301,7 @@ void TimeDisplay::updateTime()
 	updateLeapSeconds();
 	powerManager->update();
 	
-	updateDimState();
-	
 	QDateTime now = currentDateTime();
-	int sbef = now.time().second();
 	syncOK = syncOK && (lastNTPReply.secsTo(now)< NTPTIMEOUT); 
 	
 	if (syncOK){
@@ -317,7 +314,9 @@ void TimeDisplay::updateTime()
 	}
 	// Call repaint on tod and date ??
 	
-	updateBackgroundImage(false);
+	updateBackgroundImage(false); // slow, so delay this
+	
+	updateDimState(); // slow so delay this
 	
 	now = currentDateTime();
 	
@@ -337,6 +336,7 @@ void TimeDisplay::updateTime()
 
 void TimeDisplay::updateDimState(){
 	if (!dimEnable) return;
+	bool lowLight=false;
 	
 	// Check the sensor reading
 	QFile lf(lightLevelFile);
@@ -344,13 +344,27 @@ void TimeDisplay::updateDimState(){
 		QTextStream ts(&lf);
 		int currLightLevel=255;
 		ts >> currLightLevel;
-		lowLight=currLightLevel < dimThreshold;
+		if (ts.status() == QTextStream::Ok)
+			lowLight=currLightLevel < dimThreshold;
+		else
+			return;
 	}
 	else	
 		return;
 	
-	if (!dimActive && lowLight){
+	if (lowLight)
+		integratedLightLevel--;
+	else
+		integratedLightLevel++;
+	
+	if (integratedLightLevel <= 0) 
+		integratedLightLevel=0;
+	if (integratedLightLevel > integrationPeriod)  
+		integratedLightLevel = integrationPeriod;
+	
+	if (!dimActive && integratedLightLevel==0){
 		dimActive=true;
+		
 		QString txtColour;
 		txtColour.sprintf("color:rgba(%d,%d,%d,255)",
 				dimFontColour.red(),dimFontColour.green(),dimFontColour.blue());
@@ -359,10 +373,11 @@ void TimeDisplay::updateDimState(){
 		calText->setStyleSheet(txtColour);
 		date->setStyleSheet(txtColour);
 		imageInfo->setStyleSheet(txtColour);
+		forceUpdate();
 		bkground->setPixmap(QPixmap::fromImage(*dimImage));
 		logo->setPixmap(QPixmap::fromImage(*dimLogo));
 	}
-	else if (dimActive && !lowLight){
+	else if (dimActive && integratedLightLevel==5){
 		dimActive=false;
 		QString txtColour;
 		txtColour.sprintf("color:rgba(%d,%d,%d,255)",
@@ -372,11 +387,13 @@ void TimeDisplay::updateDimState(){
 		calText->setStyleSheet(txtColour);
 		date->setStyleSheet(txtColour);
 		imageInfo->setStyleSheet(txtColour);
+		forceUpdate();
 		bkground->setPixmap(QPixmap(currentImage));
 		logo->setPixmap(logoImage);
 	}
-	else if (dimActive && lowLight ){
+	else if (dimActive){
 	}
+	
 	
 }
 
@@ -598,11 +615,13 @@ void TimeDisplay::setDefaults()
 	dimMethod=Software;
 	dimLevel=25;
 	dimActive=false;
-	lowLight=false;
 	dimImage=NULL;
 	lightLevelFile="";
 	dimThreshold=0;
+	integrationPeriod=5;
+	integratedLightLevel=integrationPeriod;
 	
+		
 	fontColourName="white";
 	
 	timeOffset=0; // for debugging
@@ -818,6 +837,21 @@ void TimeDisplay::showDate(QDateTime & now)
 			sep=" ";
 		}
 		date->setText(s);
+}
+
+void TimeDisplay::forceUpdate()
+{
+	QDateTime now = QDateTime::currentDateTime();
+	if (syncOK){
+		showTime(now);
+		showDate(now);
+	}
+	else{
+		tod->setText("--:--:--");
+		date->setText("Unsynchronised");
+	}
+	tod->repaint();
+	date->repaint();
 }
 
 void TimeDisplay::setTODFontSize()
@@ -1506,16 +1540,7 @@ void TimeDisplay::updateBackgroundImage(bool force)
 	
 	if (!updateImage) return;
 	
-	if (syncOK){
-		showTime(now);
-		showDate(now);
-	}
-	else{
-		tod->setText("--:--:--");
-		date->setText("Unsynchronised");
-	}
-	tod->repaint();
-	date->repaint();
+	forceUpdate();
 
 	if (currentImage.isEmpty()){
 		//bkground->setStyleSheet("QLabel#Background {background: qlineargradient(x1: 0, y1: 0, x2: 0, y2: 1,"
@@ -1540,7 +1565,7 @@ void TimeDisplay::updateBackgroundImage(bool force)
 					dimImage->setPixel(i,j,val);
 				}
 			}
-			if (dimActive && lowLight){
+			if (dimActive){
 				bkground->setPixmap(QPixmap::fromImage(*dimImage));
 				return;
 			}

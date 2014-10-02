@@ -130,7 +130,8 @@ private:
 
     void showTime(QDateTime &);
     void showDate(QDateTime &);
-
+		void forceUpdate();
+		
 		void updateDimState();
 		
     void setTODFontSize();
@@ -207,9 +208,10 @@ private:
 		int  dimMethod;
 		int  dimLevel;
 		bool dimActive;
-		bool lowLight;
 		QString lightLevelFile;
 		int  dimThreshold;
+		int integratedLightLevel;
+		int integrationPeriod;
 		
 		QString fontColourName;
 		QColor  fontColour;

@@ -28,11 +28,18 @@
 
 #include <iostream>
 
+#include <QAction>
+#include <QApplication>
+#include <QDesktopWidget>
+#include <QInputDialog>
+#include <QLabel>
+#include <QMenu>
 #include <QtGui>
-#include <Qt/QtNetwork>
+#include <QtNetwork>
 #include <QTime>
 #include <QRegExp>
 #include <QUdpSocket>
+#include <QVBoxLayout>
 
 #include "PowerManager.h"
 #include "TimeDisplay.h"
@@ -503,7 +510,7 @@ void TimeDisplay::setTimeOffset()
 
 void TimeDisplay::quit()
 {
-	exit(1);
+	close();
 }
 
 void TimeDisplay::createContextMenu(const QPoint &)

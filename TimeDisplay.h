@@ -30,7 +30,7 @@
 #include <QList>
 #include <QWidget>
 #include <QDateTime>
-#include <Qt/QtXml>
+#include <QtXml>
 
 class QAction;
 class QActionGroup;

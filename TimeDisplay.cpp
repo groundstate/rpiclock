@@ -23,6 +23,14 @@
 // OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
 // THE SOFTWARE.
 
+// Notes on faking a leap second
+// (1) Set up ntpd to use  "LOCAL CLOCK" refclock
+// (2) Stop ntpd
+// (3) Set time using date
+// (4) Start ntpd
+// (5) Set leap second flag using 'leapset' (adjtimex?)
+// (6) Run rpiclock with --nocheck
+
 #include <sys/timex.h>
 #include <netinet/in.h> // For ntohl() (byte order conversion) 
 
@@ -30,6 +38,7 @@
 
 #include <QAction>
 #include <QApplication>
+#include <QDebug>
 #include <QDesktopWidget>
 #include <QInputDialog>
 #include <QLabel>
@@ -59,6 +68,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	srandom(currentDateTime().toTime_t());
 	
 	fullScreen=true;
+	checkSync=true;
 	
 	for (int i=1;i<args.size();i++){ // skip the first
 		if (args.at(i) == "--nofullscreen")
@@ -70,6 +80,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 			std::cout << "--help         print this help" << std::endl;
 			std::cout << "--license      print this help" << std::endl;
 			std::cout << "--nofullscreen run in a window" << std::endl;
+			std::cout << "--nocheck      disable checking of host synchronization" << std::endl;
 			std::cout << "--version      display version" << std::endl;
 			
 			exit(EXIT_SUCCESS);
@@ -107,6 +118,9 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 			std::cout << "This ain't no stinkin' Perl script!" << std::endl;
 			
 			exit(EXIT_SUCCESS);
+		}
+		else if (args.at(i) == "--nocheck"){
+			checkSync=false;
 		}
 		else{
 			std::cout << "rpiclock: Unknown option '"<< args.at(i).toStdString() << "'" << std::endl;
@@ -281,7 +295,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	updateTimer = new QTimer(this);
 	connect(updateTimer,SIGNAL(timeout()),this,SLOT(updateTime()));
 	QDateTime now = currentDateTime();
-	updateTimer->start(1000-now.time().msec()); // don't try to get the first blink right
+	updateTimer->start(wakeupTime-now.time().msec()); // don't try to get the first blink right
 
 }
 
@@ -311,7 +325,7 @@ void TimeDisplay::updateTime()
 	QDateTime now = currentDateTime();
 	syncOK = syncOK && (lastNTPReply.secsTo(now)< NTPTIMEOUT); 
 	
-	if (syncOK){
+	if (!checkSync || syncOK){
 		showTime(now);
 		showDate(now);
 	}
@@ -331,13 +345,13 @@ void TimeDisplay::updateTime()
 		if (now.time().msec() < blinkDelay) 
 			updateTimer->start(blinkDelay-now.time().msec());
 		else
-			updateTimer->start(1000-blinkDelay);
+			updateTimer->start(wakeupTime-blinkDelay);
 	}
 	else
-		updateTimer->start(1000-now.time().msec());
+		updateTimer->start(wakeupTime-now.time().msec());
 	
 	checkConfigFile();
-	writeNTPDatagram();
+	if (checkSync) writeNTPDatagram();
 	
 }
 
@@ -591,6 +605,9 @@ void TimeDisplay::setDefaults()
 	hourFormat=TwelveHour;
 	timezone="Australia/Sydney";
 	
+	displayDelay=0;
+ 	wakeupTime=1000+displayDelay;
+
 	defaultImage="";
 	backgroundMode = Fixed;
 	imagePath = "";
@@ -748,10 +765,15 @@ void TimeDisplay::showTime(QDateTime &now)
 	
 	// leap secondy stuff
 	int leapCorrection=0;
+	struct timex tx;
+	tx.modes=0;
+	int ret = adjtimex(&tx);
+	qDebug() << UTCnow.time() <<  " " <<  UTCnow.time().msec() <<" " << ret << " " << tx.status ;
 	if (UTCnow.time().hour() == 23 && UTCnow.time().minute() == 59 && UTCnow.time().second() ==59) // a small sanity check
 	{
-		struct timex tx;
-		int ret = adjtimex(&tx);
+		tx.modes=0;		
+		ret = adjtimex(&tx);
+
 		if (ret == TIME_OOP)
 			leapCorrection = 1;
 	}
@@ -849,7 +871,7 @@ void TimeDisplay::showDate(QDateTime & now)
 void TimeDisplay::forceUpdate()
 {
 	QDateTime now = QDateTime::currentDateTime();
-	if (syncOK){
+	if (!checkSync || syncOK){
 		showTime(now);
 		showDate(now);
 	}
@@ -1138,6 +1160,10 @@ bool TimeDisplay::readConfig(QString s)
 				hourFormat=TwelveHour;
 			else if (lc=="24 hour")
 				hourFormat=TwentyFourHour;
+		}
+		else if (elem.tagName()=="delay"){
+			displayDelay=elem.text().toInt();
+			wakeupTime = 1000+displayDelay;
 		}
 		else if (elem.tagName()=="blink")
 			blinkSeparator = (lc =="yes");

@@ -30,13 +30,15 @@
 
 #include "TimeDisplay.h"
 
+QApplication *app;
+
 int main(int argc, char *argv[])
 {
  
-	QApplication app(argc, argv);
-	QStringList args = app.arguments(); 
+	app = new QApplication(argc, argv);
+	QStringList args = app->arguments(); 
 	TimeDisplay disp(args);
 	disp.show();
-	return app.exec();
+	return app->exec();
 	
 }

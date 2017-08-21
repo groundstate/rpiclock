@@ -110,6 +110,7 @@ private slots:
     void setHHMMTODFormat();
     void setHHMMSSTODFormat();
 		
+		void saveSettings();
     void quit();
 
     void createContextMenu(const QPoint &);
@@ -165,6 +166,8 @@ private:
 		
     PowerManager   *powerManager;
 
+		QDomDocument doc;
+		
 		QString configFile;
 		QDateTime configLastModified;
 		
@@ -243,6 +246,7 @@ private:
     QAction *twelveHourFormatAction,*twentyFourHourFormatAction;
     QAction *sepBlinkingOnAction,*HHMMSSFormatAction,*HHMMFormatAction;
     QAction *powerManAction;
+		QAction *saveSettingsAction;
     QAction *quitAction;
 
     QActionGroup *hourFormatActionGroup,*TODFormatActionGroup;

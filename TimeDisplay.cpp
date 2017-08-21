@@ -62,6 +62,8 @@
 #define MAXLEAPCHECKINTERVAL 1048576 // two weeks should be good enough
 #define NTPTIMEOUT 64 // waiting time for a NTP response, before declaring no sync
 
+extern QApplication *app;
+
 TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 {
 
@@ -130,10 +132,16 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 		}
 	}
 	
+	//QRect screen = app->desktop()->screenGeometry();
+	
 	setWindowTitle(tr("rpiclock"));
-	setMinimumSize(QSize(1920,1080));
+	
 	if (fullScreen)
 		setWindowState(windowState() ^ Qt::WindowFullScreen);
+	else{
+		// this is just a bodge for testing on a desktop so be kind
+		setMinimumSize(QSize(1920,1080)); // chnange as appropriate for the background image
+	}
 	
 	setMouseTracking(true); // so that mouse movements wake up the display
 	QCursor curs;
@@ -481,6 +489,14 @@ void TimeDisplay::setGPSTime()
 	setCalTextFontSize();
 	setImageCreditFontSize();
 	updateActions();
+	QDomNodeList nl = doc.elementsByTagName("timescale");
+	if (nl.count() == 1){
+		QDomElement el = nl.at(0).toElement();
+		if (!(el.isNull())){
+			nl.at(0).toElement().firstChild().setNodeValue("GPS");
+			//Create a QDomText node and add it as a child of your element after removing the current text node from the element. 
+		}
+	}
 }
 
 void TimeDisplay::togglePowerManagement()
@@ -522,6 +538,18 @@ void TimeDisplay::setTimeOffset()
 		timeOffset=ret;
 }
 
+void TimeDisplay::saveSettings()
+{
+	QFile file( configFile );
+	if( !file.open( QIODevice::WriteOnly | QIODevice::Text ) ){
+		qDebug( "Failed to open file for writing." );
+		return;
+	}
+	QTextStream stream( &file );
+	stream << doc.toString();
+	file.close();
+}
+
 void TimeDisplay::quit()
 {
 	close();
@@ -553,6 +581,10 @@ void TimeDisplay::createContextMenu(const QPoint &)
 	cm->addSeparator();
 	cm->addAction(testLeap);
 	cm->addAction(offsetTime);
+	
+	cm->addSeparator();
+	cm->addAction(saveSettingsAction);
+	
 	cm->addSeparator();
 	cm->addAction(quitAction);
 	cm->exec(QCursor::pos());
@@ -736,6 +768,11 @@ void TimeDisplay::createActions()
 	offsetTime->setStatusTip(tr("Set time offset"));
 	addAction(offsetTime);
 	connect(offsetTime, SIGNAL(triggered()), this, SLOT(setTimeOffset()));
+	
+	saveSettingsAction = new QAction(QIcon(), tr("Save settings"), this);
+	saveSettingsAction->setStatusTip(tr("Save settings"));
+	addAction(saveSettingsAction);
+	connect(saveSettingsAction, SIGNAL(triggered()), this, SLOT(saveSettings()));
 	
 	quitAction = new QAction(QIcon(), tr("Quit"), this);
 	quitAction->setStatusTip(tr("Quit"));
@@ -1109,8 +1146,6 @@ bool TimeDisplay::readConfig(QString s)
 	proxyPort=-1;
 	proxyUser="";
 	proxyPassword="";
-	
-	QDomDocument doc;
 	
 	qDebug() << "Using configuration file " << s;
 	

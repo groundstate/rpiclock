@@ -449,6 +449,7 @@ void TimeDisplay::setLocalTime()
 	setCalTextFontSize();
 	setImageCreditFontSize();
 	updateActions();
+	setConfig("timescale","Local");
 }
 
 void TimeDisplay::setUTCTime()
@@ -463,6 +464,7 @@ void TimeDisplay::setUTCTime()
 	setCalTextFontSize();
 	setImageCreditFontSize();
 	updateActions();
+	setConfig("timescale","UTC");
 }
 
 void TimeDisplay::setUnixTime()
@@ -476,6 +478,7 @@ void TimeDisplay::setUnixTime()
 	setCalTextFontSize();
 	setImageCreditFontSize();
 	updateActions();
+	setConfig("timescale","UNIX");
 }
 
 void TimeDisplay::setGPSTime()
@@ -489,14 +492,7 @@ void TimeDisplay::setGPSTime()
 	setCalTextFontSize();
 	setImageCreditFontSize();
 	updateActions();
-	QDomNodeList nl = doc.elementsByTagName("timescale");
-	if (nl.count() == 1){
-		QDomElement el = nl.at(0).toElement();
-		if (!(el.isNull())){
-			nl.at(0).toElement().firstChild().setNodeValue("GPS");
-			//Create a QDomText node and add it as a child of your element after removing the current text node from the element. 
-		}
-	}
+	setConfig("timescale","GPS");
 }
 
 void TimeDisplay::togglePowerManagement()
@@ -507,6 +503,7 @@ void TimeDisplay::togglePowerManagement()
 void TimeDisplay::toggleSeparatorBlinking()
 {
 	blinkSeparator=!blinkSeparator;
+	setConfig("blink",(blinkSeparator?"yes":"no"));
 }
 
 void TimeDisplay::setHHMMTODFormat()
@@ -522,10 +519,12 @@ void TimeDisplay::setHHMMSSTODFormat()
 void TimeDisplay::set12HourFormat()
 {
 	hourFormat=TwelveHour;
+	setConfig("todformat","12 hour");
 }
 
 void TimeDisplay::set24HourFormat()
 {
+	setConfig("todformat","24 hour");
 	hourFormat=TwentyFourHour;
 }
 	
@@ -538,6 +537,17 @@ void TimeDisplay::setTimeOffset()
 		timeOffset=ret;
 }
 
+void TimeDisplay::setConfig(QString tag,QString val)
+{
+	QDomNodeList nl = doc.elementsByTagName(tag);
+	if (nl.count() == 1){
+		QDomElement el = nl.at(0).toElement();
+		if (!(el.isNull())){
+			nl.at(0).toElement().firstChild().setNodeValue(val);
+		}
+	}
+}
+
 void TimeDisplay::saveSettings()
 {
 	QFile file( configFile );
@@ -548,6 +558,10 @@ void TimeDisplay::saveSettings()
 	QTextStream stream( &file );
 	stream << doc.toString();
 	file.close();
+	
+	QFileInfo fi = QFileInfo(configFile);
+	configLastModified= fi.lastModified();
+		
 }
 
 void TimeDisplay::quit()

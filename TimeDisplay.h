@@ -141,6 +141,8 @@ private:
 		void setCalTextFontSize();
 		void setImageCreditFontSize();
 		
+		void setConfig(QString,QString);
+		
     void fetchLeapSeconds();
     void readLeapFile();
 		

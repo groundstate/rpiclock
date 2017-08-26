@@ -188,11 +188,12 @@ private:
     bool leapsInitialized;
     QList<LeapInfo *> leapTable;
 
-	int displayDelay;
-	int wakeupTime;
-	bool checkSync;
+		int displayDelay;
+		int wakeupTime;
+		bool checkSync;
 		QUdpSocket *ntpSocket;
 		QDateTime  lastNTPReply;
+		int syncLossThreshold; // in seconds
 		bool syncOK;
 		
     int timeScale;

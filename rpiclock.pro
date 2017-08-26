@@ -5,6 +5,6 @@ SOURCES       = TimeDisplay.cpp \
 QT           += core gui network xml
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-#CONFIG      += debug
-DEFINES      += QT_NO_DEBUG_OUTPUT
-#DEFINES      += DEBUG
+CONFIG      += debug
+#DEFINES      += QT_NO_DEBUG_OUTPUT
+DEFINES      += DEBUG

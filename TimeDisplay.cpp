@@ -55,7 +55,7 @@
 
 #define VERSION_INFO "v0.1.3"
 
-#define LEAPSECONDS 16     // whatever's current
+#define LEAPSECONDS 18     // whatever's current
 #define GPSEPOCH 315964800 // GPS epoch in the Unix time scale
 #define UNIXEPOCH 0x83aa7e80  //  Unix epoch in the NTP time scale 
 #define DELTATAIGPS 19     // 
@@ -629,10 +629,18 @@ void	TimeDisplay::readNTPDatagram()
 	QByteArray data;
 	data.resize(ntpSocket->pendingDatagramSize());
 	ntpSocket->readDatagram(data.data(), data.size());
-	unsigned int u1 = ntohl(*reinterpret_cast<const int*>(data.data()));
-	unsigned int b4=(u1 & 0xff000000)>>24; 
-	//qDebug() << "reply li="<< ((b4 >> 6) & 0x03) << " vn=" << ((b4 >>3) & 0x07);
-	syncOK = ((b4 >> 6) & 0x03) != 3;
+	char *pdata = data.data();
+	unsigned int u1 = ntohl(*reinterpret_cast<const int*>(pdata));
+	unsigned int b4=(u1 & 0xff000000)>>24;
+	unsigned int b3=(u1 & 0x00ff0000)>>16;
+	char b1=(u1 & 0x000000ff);
+	qDebug() << "reply li="<< ((b4 >> 6) & 0x03) << " vn=" << ((b4 >>3) & 0x07) << " st = " << b3 << " pr=" <<  (int) b1;
+	pdata += 16;
+	unsigned int u2 = ntohl(*reinterpret_cast<const int*>(pdata));
+	qDebug() << u2-UNIXEPOCH << " " << time(NULL);
+	//syncOK = ((b4 >> 6) & 0x03) != 3;
+	// syncOK = (b3 >0) && (b3<16);
+	syncOK= time(NULL) - (u2-UNIXEPOCH) < syncLossThreshold && ((b3 >0) && (b3<16)); 
 	lastNTPReply=currentDateTime();
 }
 
@@ -642,6 +650,8 @@ void	TimeDisplay::readNTPDatagram()
 
 void TimeDisplay::setDefaults()
 {
+	syncLossThreshold = 3600;
+	
 	timeScale=Local;
 	TODFormat=hhmmss;
 	dateFormat=PrettyDate;
@@ -680,6 +690,24 @@ void TimeDisplay::setDefaults()
 	lastLeapFileFetch=leapFileExpiry;
 	leapFileCheckInterval=8;
 	leapFile = "";
+	// Look for a system leap file
+	// On modern Linuxen, typically this is /usr/share/zoneinfo/leap-seconds.list
+	QFileInfo fi("/usr/share/zoneinfo/leap-seconds.list");
+	if (fi.exists())
+		leapFile = "/usr/share/zoneinfo/leap-seconds.list";
+	
+	if (leapFile.isEmpty()){
+		fi.setFile("/etc/leap-seconds.list");
+		if (fi.exists())
+			leapFile="/etc/leap-seconds.list";
+	}
+	
+	if (leapFile.isEmpty()){
+		fi.setFile("/etc/ntp/leap-seconds.list");
+		if (fi.exists())
+			leapFile="/etc/ntp/leap-seconds.list";
+	}
+	qDebug() << "Found system leap file " << leapFile;
 	
 	dimEnable=true;
 	dimMethod=Software;
@@ -1351,7 +1379,7 @@ bool TimeDisplay::readConfig(QString s)
 		elem=elem.nextSiblingElement();
 	}
 	
-	if (!autoUpdateLeapFile){
+	if (!autoUpdateLeapFile && !leapFileURL.isEmpty()){ // empty means use system file
 		// clean the URL if necessary
 		qDebug() << "leap file URL is " << leapFileURL;
 		// I'll be sloppy here - just remove all occurrences of file://

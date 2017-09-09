@@ -74,7 +74,7 @@ public:
 
     TimeDisplay(QStringList &);
 
-    enum TimeScale  { Local, UTC, Unix, GPS };
+    enum TimeScale  { Local, UTC, Unix, GPS, Retirement };
     enum TODFormat  {hhmm,hhmmss};
     enum HourFormat {TwelveHour,TwentyFourHour};
     enum BackgroundMode  {Fixed,Slideshow};
@@ -102,6 +102,8 @@ private slots:
     void setUnixTime();
     void setGPSTime();
     void setUTCTime();
+		void setRetirementTime();
+		
     void set12HourFormat();
     void set24HourFormat();
 
@@ -134,6 +136,7 @@ private:
 		void forceUpdate();
 		
 		void updateDimState();
+		void updatePPSState();
 		
     void setTODFontSize();
     void setDateFontSize();
@@ -202,7 +205,9 @@ private:
     int dateFormat;
     QString timezone;
 
-    QString localTimeBanner,UTCBanner,UnixBanner,GPSBanner;
+    QString localTimeBanner,UTCBanner,UnixBanner,GPSBanner,BeforeRetirementBanner,AfterRetirementBanner;
+		
+		QDateTime lastDayOfWork;
 		
     bool blinkSeparator;
     int  blinkDelay;
@@ -211,6 +216,11 @@ private:
     QString currentImage;
     QString logoImage;
 		int slideshowPeriod; // in hours
+		
+		//
+		bool checkPPS;
+		int  ppsDeviceNumber;
+		bool ppsOK;
 		
 		//
 		bool dimEnable;
@@ -245,7 +255,8 @@ private:
     QTimer  *updateTimer;
     QLabel  *bkground,*title,*tod,*date,*logo,*img,*calText,*imageInfo;
 		QWidget *logoParentWidget;
-    QAction *toggleFullScreenAction,*localTimeAction,*UnixTimeAction,*GPSTimeAction,*UTCTimeAction;
+    QAction *toggleFullScreenAction;
+		QAction *localTimeAction,*UnixTimeAction,*GPSTimeAction,*UTCTimeAction,*RetirementTimeAction;
     QAction *twelveHourFormatAction,*twentyFourHourFormatAction;
     QAction *sepBlinkingOnAction,*HHMMSSFormatAction,*HHMMFormatAction;
     QAction *powerManAction;

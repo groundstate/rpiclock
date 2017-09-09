@@ -3,22 +3,34 @@
  <!-- You must specify if using power saving, since on/off times are defined wrt local time -->
  <timezone>Australia/Sydney</timezone>
  <!-- The displayed timescale can be local,UTC,UNIX or GPS -->
- <timescale>Local</timescale>
+ <timescale>Retirement</timescale>
  <!-- Time-of-day format when local time is displayed can be "12 hour" or "24 hour" -->
  <todformat>12 hour</todformat>
  <!-- Blink the colons in the display time -->
  <blink>yes</blink>
  <!-- Text displayed in the first line, describing the timescale -->
+ 
+ <!-- Date and time of retirement (local time), ISO format -->
+ <retirement>2017-09-09 22:37:00</retirement>
+ 
  <banners>
   <local>Local time</local>
   <unix>Unix time</unix>
   <gps>GPS time</gps>
   <utc>Coordinated Universal Time</utc>
  </banners>
+ 
  <!-- image that is displayed in the lower left corner -->
  <logo>/home/michael/.rpiclock/rpiclock.png</logo>
  <!-- any named color like #rrggbb, X11 colour, or WWWW SVG colour eg gainsboro,steelblue -->
  <fontcolour>#ffffff</fontcolour>
+ 
+ <!-- if rpiclock is running on a system with a GNSS receiver attached, this checks for the 1 pps -->
+ <pps>
+	 <enable>no</enable>
+	 <devicenum></devicenum>
+ </pps>
+ 
  <!-- Image files to display in the background. These are presumed to be 1920x1080 -->
  <!-- Supported formats are png,tiff,jpg -->
  <background>
@@ -47,6 +59,7 @@
    <description>Marty McFly's birthday</description>
   </event>
  </background>
+ 
  <power>
   <!-- Conserve power by switching off at specified times  (yes/no) -->
   <conserve>no</conserve>
@@ -59,6 +72,7 @@
   <!-- number of minutes that a keypress or mouse event etc will override power saving -->
   <overridetime>60</overridetime>
  </power>
+ 
  <dimming>
   <enable>no</enable>
   <!-- available methods vbetool/software -->
@@ -71,6 +85,7 @@
   <!-- threshold for dimming the display, 0..255 -->
   <threshold>128</threshold>
  </dimming>
+ 
  <!-- The current number of leap seconds is needed in order to display GPS time -->
  <leapseconds>
   <!-- if autoupdate==yes then rpiclock will attempt to fetch a file from the url specified below -->
@@ -84,4 +99,5 @@
   <!-- if autoupdate is on, this is where the leap second file is cached -->
   <cachedfile>/home/michael/.rpiclock/leap-seconds.list.cache</cachedfile>
  </leapseconds>
+ 
 </rpiclock>

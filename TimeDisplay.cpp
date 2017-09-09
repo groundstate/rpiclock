@@ -279,6 +279,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 		case GPS:setGPSTime();break;
 		case Unix:setUnixTime();break;
 		case UTC:setUTCTime();break;
+		case Retirement:setRetirementTime();break;
 	}
 	
 	timezone.prepend(":");
@@ -341,6 +342,11 @@ void TimeDisplay::updateTime()
 		tod->setText("--:--:--");
 		date->setText("Unsynchronised");
 	}
+	
+	if (checkPPS){
+		updatePPSState();
+	}
+	
 	// Call repaint on tod and date ??
 	
 	updateBackgroundImage(false); // slow, so delay this
@@ -426,6 +432,10 @@ void TimeDisplay::updateDimState(){
 	
 }
 
+void TimeDisplay::updatePPSState(){
+	ppsOK=false;
+}
+
 void TimeDisplay::toggleFullScreen()
 {
 	fullScreen=!fullScreen;
@@ -493,6 +503,20 @@ void TimeDisplay::setGPSTime()
 	setImageCreditFontSize();
 	updateActions();
 	setConfig("timescale","GPS");
+}
+
+void TimeDisplay::setRetirementTime()
+{
+	timeScale=Retirement;
+	dateFormat=PrettyDate;
+	title->setText(BeforeRetirementBanner);
+	setTODFontSize(); 
+	setDateFontSize();
+	setTitleFontSize();
+	setCalTextFontSize();
+	setImageCreditFontSize();
+	updateActions();
+	setConfig("timescale","Retirement");
 }
 
 void TimeDisplay::togglePowerManagement()
@@ -580,6 +604,7 @@ void TimeDisplay::createContextMenu(const QPoint &)
 	cm->addAction(UTCTimeAction);
 	cm->addAction(UnixTimeAction);
 	cm->addAction(GPSTimeAction);
+	cm->addAction(RetirementTimeAction);
 	
 	cm->addSeparator();
 	cm->addAction(sepBlinkingOnAction);
@@ -677,7 +702,12 @@ void TimeDisplay::setDefaults()
 	UTCBanner="Coordinated Universal Time";
 	UnixBanner="Unix time";
 	GPSBanner="GPS time";
+	BeforeRetirementBanner="Until Retirement";
+	AfterRetirementBanner="Since Retirement";
 	
+	lastDayOfWork=QDateTime(QDate(2017,9,29),QTime(16,36)); // defaults to local time
+	
+	// leap seconds
 	autoUpdateLeapFile=false;
 	leapFileURL=""; // no default so as to be kind to eg NIST !
 	proxyServer="";
@@ -709,6 +739,12 @@ void TimeDisplay::setDefaults()
 	}
 	qDebug() << "Found system leap file " << leapFile;
 	
+	// system PPS
+	checkPPS=false;
+	ppsDeviceNumber=0;
+	ppsOK=false;
+	
+	// dimming
 	dimEnable=true;
 	dimMethod=Software;
 	dimLevel=25;
@@ -758,6 +794,13 @@ void TimeDisplay::createActions()
 	connect(UnixTimeAction, SIGNAL(triggered()), this, SLOT(setUnixTime()));
 	UnixTimeAction->setCheckable(true);
 	UnixTimeAction->setChecked(timeScale==Unix);
+	
+	RetirementTimeAction = actionGroup->addAction(QIcon(), tr("Retirement time"));
+	RetirementTimeAction->setStatusTip(tr("Show Retirement time"));
+	connect(RetirementTimeAction, SIGNAL(triggered()), this, SLOT(setRetirementTime()));
+	RetirementTimeAction->setCheckable(true);
+	RetirementTimeAction->setChecked(timeScale==Retirement);
+	
 	
 	hourFormatActionGroup = new QActionGroup(this);
 	
@@ -896,6 +939,19 @@ void TimeDisplay::showTime(QDateTime &now)
 			s.sprintf("%i",nsecs - nweeks*86400*7);
 			break;
 		}
+		case Retirement:
+		{
+			int dt = now.toTime_t() - lastDayOfWork.toTime_t();
+			if (dt <0){
+				title->setText(BeforeRetirementBanner);
+				dt *= -1;
+			}
+			else{
+				title->setText(AfterRetirementBanner);
+			}
+			s.sprintf("%i s", dt); 
+			break;
+		}
 	}
 	tod->setText(s);
 }
@@ -905,26 +961,32 @@ void TimeDisplay::showDate(QDateTime & now)
 		QString s(""),stmp;
 		QString sep="";
 		
+		QDateTime tmpdt;
+		if (timeScale != Retirement)
+			tmpdt=now;
+		else
+			tmpdt=lastDayOfWork;
+		
 		if (dateFormat & ISOdate){
 			s.append(sep);
-			s.append(now.toString("yyyy-MM-dd"));		
+			s.append(tmpdt.toString("yyyy-MM-dd"));		
 			sep="  ";
 		}
 		if (dateFormat & PrettyDate){
 			s.append(sep);
-			s.append(now.toString("dd MMM yyyy"));
+			s.append(tmpdt.toString("dd MMM yyyy"));
 			sep=" ";
 		}
 		if (dateFormat & MJD){
 			s.append(sep);
-			int tt = now.toTime_t();
+			int tt = tmpdt.toTime_t();
 			stmp.sprintf("MJD %d",tt/86400 + 40587);
 			s.append(stmp);
 			sep=" ";
 		}
 		if (dateFormat & GPSDayWeek){
 			s.append(sep);
-			int nsecs = now.toTime_t()-GPSEPOCH+leapSeconds;
+			int nsecs = tmpdt.toTime_t()-GPSEPOCH+leapSeconds;
 			int wn = int(nsecs/86400/7);
 			int dn  = int((nsecs- wn*86400*7)/86400);
 			stmp.sprintf("Wn %i Dn %i",wn,dn);
@@ -935,11 +997,11 @@ void TimeDisplay::showDate(QDateTime & now)
 			s.append(sep);
 			int doy=1;
 			if (timeScale == UTC || timeScale == Unix){
-				QDateTime UTCnow = now.toUTC();
-				doy=UTCnow.date().dayOfYear();
+				QDateTime UTCtmpdt = tmpdt.toUTC();
+				doy=UTCtmpdt.date().dayOfYear();
 			}
 			else
-				doy=now.date().dayOfYear();
+				doy=tmpdt.date().dayOfYear();
 			stmp.sprintf("DOY %d",doy);
 			s.append(stmp);
 			sep=" ";
@@ -987,6 +1049,9 @@ void TimeDisplay::setTODFontSize()
 			break;
 		case GPS:
 			tw = fm.width("99:99:99"); // looks too big if you use TOW
+			break;
+		case Retirement:
+			tw=fm.width("999999999 s");
 			break;
 	}
 	f.setPointSize((0.9*f.pointSize()*w)/tw);
@@ -1230,6 +1295,8 @@ bool TimeDisplay::readConfig(QString s)
 				timeScale=GPS;
 			else if (lc=="unix")
 				timeScale=Unix;
+			else if (lc=="retirement")
+				timeScale=Retirement;
 		}
 		else if (elem.tagName()=="todformat")
 		{
@@ -1237,6 +1304,12 @@ bool TimeDisplay::readConfig(QString s)
 				hourFormat=TwelveHour;
 			else if (lc=="24 hour")
 				hourFormat=TwentyFourHour;
+		}
+		else if (elem.tagName()=="retirement")
+		{
+			QDateTime tmp = QDateTime::fromString(lc,"yyyy-MM-dd HH:mm:ss");
+			if (tmp.isValid())
+				lastDayOfWork = tmp;
 		}
 		else if (elem.tagName()=="delay"){
 			displayDelay=elem.text().toInt();
@@ -1406,6 +1479,7 @@ void TimeDisplay::checkConfigFile(){
 				case GPS:setGPSTime();break;
 				case Unix:setUnixTime();break;
 				case UTC:setUTCTime();break;
+				case Retirement:setRetirementTime();break;
 			}
 	
 			timezone.prepend(":");

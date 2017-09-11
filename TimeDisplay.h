@@ -74,7 +74,7 @@ public:
 
     TimeDisplay(QStringList &);
 
-    enum TimeScale  { Local, UTC, Unix, GPS, Retirement };
+    enum TimeScale  { Local, UTC, Unix, GPS, Countdown };
     enum TODFormat  {hhmm,hhmmss};
     enum HourFormat {TwelveHour,TwentyFourHour};
     enum BackgroundMode  {Fixed,Slideshow};
@@ -102,7 +102,7 @@ private slots:
     void setUnixTime();
     void setGPSTime();
     void setUTCTime();
-		void setRetirementTime();
+		void setCountdownTime();
 		
     void set12HourFormat();
     void set24HourFormat();
@@ -205,9 +205,9 @@ private:
     int dateFormat;
     QString timezone;
 
-    QString localTimeBanner,UTCBanner,UnixBanner,GPSBanner,BeforeRetirementBanner,AfterRetirementBanner;
+    QString localTimeBanner,UTCBanner,UnixBanner,GPSBanner,BeforeCountdownBanner,AfterCountdownBanner;
 		
-		QDateTime lastDayOfWork;
+		QDateTime countdownDateTime;
 		
     bool blinkSeparator;
     int  blinkDelay;
@@ -256,7 +256,7 @@ private:
     QLabel  *bkground,*title,*tod,*date,*logo,*img,*calText,*imageInfo;
 		QWidget *logoParentWidget;
     QAction *toggleFullScreenAction;
-		QAction *localTimeAction,*UnixTimeAction,*GPSTimeAction,*UTCTimeAction,*RetirementTimeAction;
+		QAction *localTimeAction,*UnixTimeAction,*GPSTimeAction,*UTCTimeAction,*CountdownTimeAction;
     QAction *twelveHourFormatAction,*twentyFourHourFormatAction;
     QAction *sepBlinkingOnAction,*HHMMSSFormatAction,*HHMMFormatAction;
     QAction *powerManAction;

@@ -279,7 +279,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 		case GPS:setGPSTime();break;
 		case Unix:setUnixTime();break;
 		case UTC:setUTCTime();break;
-		case Retirement:setRetirementTime();break;
+		case Countdown:setCountdownTime();break;
 	}
 	
 	timezone.prepend(":");
@@ -505,18 +505,18 @@ void TimeDisplay::setGPSTime()
 	setConfig("timescale","GPS");
 }
 
-void TimeDisplay::setRetirementTime()
+void TimeDisplay::setCountdownTime()
 {
-	timeScale=Retirement;
+	timeScale=Countdown;
 	dateFormat=PrettyDate;
-	title->setText(BeforeRetirementBanner);
+	title->setText(BeforeCountdownBanner);
 	setTODFontSize(); 
 	setDateFontSize();
 	setTitleFontSize();
 	setCalTextFontSize();
 	setImageCreditFontSize();
 	updateActions();
-	setConfig("timescale","Retirement");
+	setConfig("timescale","Countdown");
 }
 
 void TimeDisplay::togglePowerManagement()
@@ -604,7 +604,7 @@ void TimeDisplay::createContextMenu(const QPoint &)
 	cm->addAction(UTCTimeAction);
 	cm->addAction(UnixTimeAction);
 	cm->addAction(GPSTimeAction);
-	cm->addAction(RetirementTimeAction);
+	cm->addAction(CountdownTimeAction);
 	
 	cm->addSeparator();
 	cm->addAction(sepBlinkingOnAction);
@@ -702,10 +702,10 @@ void TimeDisplay::setDefaults()
 	UTCBanner="Coordinated Universal Time";
 	UnixBanner="Unix time";
 	GPSBanner="GPS time";
-	BeforeRetirementBanner="Until Retirement";
-	AfterRetirementBanner="Since Retirement";
+	BeforeCountdownBanner="Until ...";
+	AfterCountdownBanner="Since ...";
 	
-	lastDayOfWork=QDateTime(QDate(2017,9,29),QTime(16,36)); // defaults to local time
+	countdownDateTime=QDateTime(QDate(2017,9,29),QTime(16,36)); // defaults to local time
 	
 	// leap seconds
 	autoUpdateLeapFile=false;
@@ -795,11 +795,11 @@ void TimeDisplay::createActions()
 	UnixTimeAction->setCheckable(true);
 	UnixTimeAction->setChecked(timeScale==Unix);
 	
-	RetirementTimeAction = actionGroup->addAction(QIcon(), tr("Retirement time"));
-	RetirementTimeAction->setStatusTip(tr("Show Retirement time"));
-	connect(RetirementTimeAction, SIGNAL(triggered()), this, SLOT(setRetirementTime()));
-	RetirementTimeAction->setCheckable(true);
-	RetirementTimeAction->setChecked(timeScale==Retirement);
+	CountdownTimeAction = actionGroup->addAction(QIcon(), tr("Countdown time"));
+	CountdownTimeAction->setStatusTip(tr("Show Countdown time"));
+	connect(CountdownTimeAction, SIGNAL(triggered()), this, SLOT(setCountdownTime()));
+	CountdownTimeAction->setCheckable(true);
+	CountdownTimeAction->setChecked(timeScale==Countdown);
 	
 	
 	hourFormatActionGroup = new QActionGroup(this);
@@ -939,15 +939,15 @@ void TimeDisplay::showTime(QDateTime &now)
 			s.sprintf("%i",nsecs - nweeks*86400*7);
 			break;
 		}
-		case Retirement:
+		case Countdown:
 		{
-			int dt = now.toTime_t() - lastDayOfWork.toTime_t();
+			int dt = now.toTime_t() - countdownDateTime.toTime_t();
 			if (dt <0){
-				title->setText(BeforeRetirementBanner);
+				title->setText(BeforeCountdownBanner);
 				dt *= -1;
 			}
 			else{
-				title->setText(AfterRetirementBanner);
+				title->setText(AfterCountdownBanner);
 			}
 			s.sprintf("%i s", dt); 
 			break;
@@ -962,10 +962,10 @@ void TimeDisplay::showDate(QDateTime & now)
 		QString sep="";
 		
 		QDateTime tmpdt;
-		if (timeScale != Retirement)
+		if (timeScale != Countdown)
 			tmpdt=now;
 		else
-			tmpdt=lastDayOfWork;
+			tmpdt=countdownDateTime;
 		
 		if (dateFormat & ISOdate){
 			s.append(sep);
@@ -1050,7 +1050,7 @@ void TimeDisplay::setTODFontSize()
 		case GPS:
 			tw = fm.width("99:99:99"); // looks too big if you use TOW
 			break;
-		case Retirement:
+		case Countdown:
 			tw=fm.width("999999999 s");
 			break;
 	}
@@ -1295,8 +1295,8 @@ bool TimeDisplay::readConfig(QString s)
 				timeScale=GPS;
 			else if (lc=="unix")
 				timeScale=Unix;
-			else if (lc=="retirement")
-				timeScale=Retirement;
+			else if (lc=="countdown")
+				timeScale=Countdown;
 		}
 		else if (elem.tagName()=="todformat")
 		{
@@ -1305,11 +1305,11 @@ bool TimeDisplay::readConfig(QString s)
 			else if (lc=="24 hour")
 				hourFormat=TwentyFourHour;
 		}
-		else if (elem.tagName()=="retirement")
+		else if (elem.tagName()=="countdowndate")
 		{
 			QDateTime tmp = QDateTime::fromString(lc,"yyyy-MM-dd HH:mm:ss");
 			if (tmp.isValid())
-				lastDayOfWork = tmp;
+				countdownDateTime = tmp;
 		}
 		else if (elem.tagName()=="delay"){
 			displayDelay=elem.text().toInt();
@@ -1383,6 +1383,10 @@ bool TimeDisplay::readConfig(QString s)
 					GPSBanner=txt;
 				else if (celem.tagName() == "utc")
 					UTCBanner=txt;
+				else if (celem.tagName() == "countdown"){
+					BeforeCountdownBanner="Until " + txt;
+					AfterCountdownBanner="Since " + txt;
+				}
 				celem=celem.nextSiblingElement();
 			}
 		}
@@ -1479,7 +1483,7 @@ void TimeDisplay::checkConfigFile(){
 				case GPS:setGPSTime();break;
 				case Unix:setUnixTime();break;
 				case UTC:setUTCTime();break;
-				case Retirement:setRetirementTime();break;
+				case Countdown:setCountdownTime();break;
 			}
 	
 			timezone.prepend(":");

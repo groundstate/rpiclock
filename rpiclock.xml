@@ -2,8 +2,8 @@
  <!-- The local time zone file is specified relative to /usr/share/zonefinfo and is case-sensitive -->
  <!-- You must specify if using power saving, since on/off times are defined wrt local time -->
  <timezone>Australia/Sydney</timezone>
- <!-- The displayed timescale can be local,UTC,UNIX or GPS -->
- <timescale>Retirement</timescale>
+ <!-- The displayed timescale can be local,UTC,UNIX,GPS or Countdown -->
+ <timescale>Countdown</timescale>
  <!-- Time-of-day format when local time is displayed can be "12 hour" or "24 hour" -->
  <todformat>12 hour</todformat>
  <!-- Blink the colons in the display time -->
@@ -11,13 +11,14 @@
  <!-- Text displayed in the first line, describing the timescale -->
  
  <!-- Date and time of retirement (local time), ISO format -->
- <retirement>2017-09-09 22:37:00</retirement>
+ <countdowndate>2017-09-11 20:58:00</countdowndate>
  
  <banners>
   <local>Local time</local>
   <unix>Unix time</unix>
   <gps>GPS time</gps>
   <utc>Coordinated Universal Time</utc>
+	<countdown>Retirement</countdown>
  </banners>
  
  <!-- image that is displayed in the lower left corner -->

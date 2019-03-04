@@ -86,6 +86,7 @@ public:
                      GPSDayWeek=0x08,
                      DOY=0x10
                     };
+
 protected slots:
 
     virtual void 	keyPressEvent (QKeyEvent *);
@@ -237,6 +238,9 @@ private:
 		QColor  dimFontColour;
 		QImage *dimImage;
 		QImage *dimLogo;
+		bool autoAdjustFontColour;
+		QColor  altFontColour;
+		bool adjustFontColour;
 		
     int backgroundMode;
     QList<CalendarItem *> calendarItems;

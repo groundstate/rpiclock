@@ -140,7 +140,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 		setWindowState(windowState() ^ Qt::WindowFullScreen);
 	else{
 		// this is just a bodge for testing on a desktop so be kind
-		setMinimumSize(QSize(1920,1080)); // chnange as appropriate for the background image
+		setMinimumSize(QSize(1920,1080)); // change as appropriate for the background image
 	}
 	
 	setMouseTracking(true); // so that mouse movements wake up the display
@@ -308,6 +308,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 
 }
 
+
 void 	TimeDisplay::keyPressEvent (QKeyEvent *ev)
 {
 	QWidget::keyPressEvent(ev);
@@ -328,6 +329,45 @@ void 	TimeDisplay::mousePressEvent (QMouseEvent *ev )
 	
 void TimeDisplay::updateTime()
 {
+	
+	if (adjustFontColour && autoAdjustFontColour){
+		QTime t;
+		t.start();
+		adjustFontColour=false;
+		qDebug() << tod->geometry() << bkground->pixmap()->size();
+		QImage im = bkground->pixmap()->toImage();
+		int x0 = tod->geometry().left();
+		int y0 = tod->geometry().top();
+		int x1 = tod->geometry().right();
+		int y1 = tod->geometry().bottom();
+		qDebug() << x0 << " " << y0 << " " << x1 << " " << y1;
+		if (tod->width() > bkground->pixmap()->width()){
+			// FIXME
+		}
+		if (tod->height() > bkground->pixmap()->height()){
+			// FIXME
+		}
+		double lum=0;
+		for (int i=x0;i<=x1;i++) // bit slow - 60 ms on 2.4 GHz 
+			for (int j=y0;j<=y1;j++){
+				QRgb px = im.pixel(i,j);
+				// luminance (r * 0.3) + (g * 0.59) + (b * 0.11). 
+				lum += qBlue(px)*0.11 + qRed(px)*0.3 + qGreen(px)*0.59;
+			}
+		lum = lum/((x1-x0)*(y1-y0))/255.0;
+		qDebug() << lum  << " " << t.elapsed();
+		if (lum > 0.5){
+			QString txtColour;
+			QColor tmpColour("yellow");
+			txtColour.sprintf("color:rgba(%d,%d,%d,255)",
+					tmpColour.red(),tmpColour.green(),tmpColour.blue());
+			title->setStyleSheet(txtColour);
+			tod->setStyleSheet(txtColour);
+			calText->setStyleSheet(txtColour);
+			date->setStyleSheet(txtColour);
+			imageInfo->setStyleSheet(txtColour);
+		}
+	}
 	updateLeapSeconds();
 	powerManager->update();
 	
@@ -757,6 +797,8 @@ void TimeDisplay::setDefaults()
 	
 		
 	fontColourName="white";
+	adjustFontColour=false;
+	autoAdjustFontColour=false;
 	
 	timeOffset=0; // for debugging
 }
@@ -1527,7 +1569,7 @@ void TimeDisplay::setWidgetStyleSheet()
 			fontColour.red(),fontColour.green(),fontColour.blue());
 	
 	title->setStyleSheet(txtColour); // seems weird but this is the recommended way
-	tod->setStyleSheet(txtColour); // seems weird but this is the recommended way
+	tod->setStyleSheet(txtColour);  //  still seems weird but this is the recommended way
 	calText->setStyleSheet(txtColour);
 	date->setStyleSheet(txtColour);
 	imageInfo->setStyleSheet(txtColour);
@@ -1760,8 +1802,10 @@ void TimeDisplay::updateBackgroundImage(bool force)
 		}
 		bkground->setPixmap(QPixmap(currentImage));
 		imageInfo->setText(makeImageInfo(currentImage));
+		adjustFontColour=true;
 	}
 
+	
 }
 
 QString TimeDisplay::pickCalendarImage()

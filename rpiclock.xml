@@ -26,6 +26,14 @@
  <!-- any named color like #rrggbb, X11 colour, or WWWW SVG colour eg gainsboro,steelblue -->
  <fontcolour>#ffffff</fontcolour>
  
+ <font>
+	<!-- font colour can toggle autoamtically for light/dark background -->
+	<autoadjustcolour>no</autoadjustcolour>
+	<lightbkcolour>#ffff00</lightbkcolour>
+	<!-- darkbkcolour will override fontcolour as the default -->
+	<darkbkcolour>#ffffff</darkbkcolour>
+ </font>
+ 
  <!-- if rpiclock is running on a system with a GNSS receiver attached, this checks for the 1 pps -->
  <pps>
 	 <enable>no</enable>
@@ -35,7 +43,8 @@
  <!-- Image files to display in the background. These are presumed to be 1920x1080 -->
  <!-- Supported formats are png,tiff,jpg -->
  <background>
-  <default>/home/michael/.rpiclock/Jeayese__Flying Tardis__001.jpg</default>
+	<default>/home/michael/.rpiclock/Jeayese__Flying Tardis__001.jpg</default>
+	<!-- <default>/home/michael/Desktop/GreenFields2.jpg</default> -->
   <!-- modes are fixed and slideshow -->
   <mode>fixed</mode>
   <!-- number of hours a slide is displayed for -->

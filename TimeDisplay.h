@@ -239,7 +239,8 @@ private:
 		QImage *dimImage;
 		QImage *dimLogo;
 		bool autoAdjustFontColour;
-		QColor  altFontColour;
+		QString lightBkFontColourName,darkBkFontColourName;
+		QColor  lightBkFontColour,darkBkFontColour;
 		bool adjustFontColour;
 		
     int backgroundMode;

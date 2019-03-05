@@ -797,8 +797,11 @@ void TimeDisplay::setDefaults()
 	
 		
 	fontColourName="white";
-	adjustFontColour=false;
 	autoAdjustFontColour=false;
+	lightBkFontColourName="yellow";
+	darkBkFontColourName=fontColourName;
+	
+	adjustFontColour=false;
 	
 	timeOffset=0; // for debugging
 }
@@ -1371,6 +1374,25 @@ bool TimeDisplay::readConfig(QString s)
 		}
 		else if (elem.tagName()=="background")
 			readBackgroundConfig(elem.firstChildElement());
+		else if (elem.tagName()=="font"){
+			QDomElement celem=elem.firstChildElement();
+			while(!celem.isNull())
+			{
+				lc=celem.text().toLower();
+				lc=lc.simplified();
+				lc=lc.remove('"');
+				if (celem.tagName() == "autoadjustcolour"){
+					autoAdjustFontColour = (lc=="yes");
+				}
+				else if (celem.tagName() =="lightbkcolour"){
+					lightBkFontColourName = lc;
+				}
+				else if (celem.tagName() =="darkbkcolour"){
+					darkBkFontColourName = lc;
+				}
+				celem=celem.nextSiblingElement();
+			}
+		}
 		else if (elem.tagName()=="power")
 		{
 			QDomElement celem=elem.firstChildElement();

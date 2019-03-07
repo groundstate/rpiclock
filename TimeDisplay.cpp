@@ -140,7 +140,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 		setWindowState(windowState() ^ Qt::WindowFullScreen);
 	else{
 		// this is just a bodge for testing on a desktop so be kind
-		setMinimumSize(QSize(1920,1080)); // change as appropriate for the background image
+		setMinimumSize(QSize(1920,1200)); // change as appropriate for the background image
 	}
 	
 	setMouseTracking(true); // so that mouse movements wake up the display
@@ -217,6 +217,7 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
 	vb->setContentsMargins(0,0,0,0);
 	bkground = new QLabel("");
 	bkground->setObjectName("Background");
+	bkground->setAlignment(Qt::AlignCenter);
 	vb->addWidget(bkground);
 
 	vb = new QVBoxLayout(bkground);
@@ -334,38 +335,55 @@ void TimeDisplay::updateTime()
 		QTime t;
 		t.start();
 		adjustFontColour=false;
-		qDebug() << tod->geometry() << bkground->pixmap()->size();
+		
 		QImage im = bkground->pixmap()->toImage();
-		int x0 = tod->geometry().left();
-		int y0 = tod->geometry().top();
-		int x1 = tod->geometry().right();
-		int y1 = tod->geometry().bottom();
-		qDebug() << x0 << " " << y0 << " " << x1 << " " << y1;
-		if (tod->width() > bkground->pixmap()->width()){
-			// FIXME
+	
+		QRect  imr = QRect(0,0,im.width(),im.height());
+		// Compute the origin of the centred image in the parent window co-ordinate system
+		// There doesn't seem to be a way to get Qt to tell you this
+		int dx = 0; 
+		int dy = 0;
+		if (im.width() != width()){
+			dx = (width() - im.width())/2;
 		}
-		if (tod->height() > bkground->pixmap()->height()){
-			// FIXME
+		
+		if (im.height() != height()){
+			dy = (height() - im.height())/2;
 		}
-		double lum=0;
-		for (int i=x0;i<=x1;i++) // bit slow - 60 ms on 2.4 GHz 
-			for (int j=y0;j<=y1;j++){
-				QRgb px = im.pixel(i,j);
-				// luminance (r * 0.3) + (g * 0.59) + (b * 0.11). 
-				lum += qBlue(px)*0.11 + qRed(px)*0.3 + qGreen(px)*0.59;
+		
+		QRect lr = tod->geometry();
+		// Now translate this rectangle so that it is in the coordinate system
+		// of the image
+		lr.translate(-dx,-dy);
+		
+		QRect ir = imr.intersected(lr);
+	
+		if (ir.isValid()){ // overlap
+			double lum=0;
+			for (int i=ir.left();i<=ir.right();i++) // bit slow - 20 ms on 2.4 GHz Xeon
+				for (int j=ir.top();j<=ir.bottom();j++){
+					QRgb px = im.pixel(i,j);
+					// luminance (r * 0.3) + (g * 0.59) + (b * 0.11). 
+					lum += qBlue(px)*0.11 + qRed(px)*0.3 + qGreen(px)*0.59;
+				}
+			lum = lum/((ir.right()-ir.left())*(ir.bottom()-ir.top()))/255.0;
+			qDebug() << lum  << " " << t.elapsed();
+			QColor oldColour = fontColour;
+			if (lum <= 0.5)
+				fontColour = darkBkFontColour;
+			else
+				fontColour = lightBkFontColour;
+
+			if (fontColour != oldColour){
+				QString txtColour;
+				txtColour.sprintf("color:rgba(%d,%d,%d,255)",
+					fontColour.red(),fontColour.green(),fontColour.blue());
+				title->setStyleSheet(txtColour);
+				tod->setStyleSheet(txtColour);
+				calText->setStyleSheet(txtColour);
+				date->setStyleSheet(txtColour);
+				imageInfo->setStyleSheet(txtColour);
 			}
-		lum = lum/((x1-x0)*(y1-y0))/255.0;
-		qDebug() << lum  << " " << t.elapsed();
-		if (lum > 0.5){
-			QString txtColour;
-			QColor tmpColour("yellow");
-			txtColour.sprintf("color:rgba(%d,%d,%d,255)",
-					tmpColour.red(),tmpColour.green(),tmpColour.blue());
-			title->setStyleSheet(txtColour);
-			tod->setStyleSheet(txtColour);
-			calText->setStyleSheet(txtColour);
-			date->setStyleSheet(txtColour);
-			imageInfo->setStyleSheet(txtColour);
 		}
 	}
 	updateLeapSeconds();
@@ -796,11 +814,10 @@ void TimeDisplay::setDefaults()
 	integratedLightLevel=integrationPeriod;
 	
 		
-	fontColourName="white";
 	autoAdjustFontColour=false;
 	lightBkFontColourName="yellow";
-	darkBkFontColourName=fontColourName;
-	
+	darkBkFontColourName="white";
+	currFontColourName = darkBkFontColourName;
 	adjustFontColour=false;
 	
 	timeOffset=0; // for debugging
@@ -1364,7 +1381,7 @@ bool TimeDisplay::readConfig(QString s)
 			blinkSeparator = (lc =="yes");
 		else if (elem.tagName()=="fontcolour"){
 			lc=elem.text();
-			fontColourName=lc.simplified();
+			currFontColourName=lc.simplified();
 		}		
 		else if (elem.tagName()=="logo"){
 			if (elem.text() != logoImage){
@@ -1386,9 +1403,11 @@ bool TimeDisplay::readConfig(QString s)
 				}
 				else if (celem.tagName() =="lightbkcolour"){
 					lightBkFontColourName = lc;
+					lightBkFontColour = QColor(lightBkFontColourName );
 				}
 				else if (celem.tagName() =="darkbkcolour"){
 					darkBkFontColourName = lc;
+					darkBkFontColour = QColor(darkBkFontColourName); 
 				}
 				celem=celem.nextSiblingElement();
 			}
@@ -1584,7 +1603,7 @@ void TimeDisplay::checkConfigFile(){
 void TimeDisplay::setWidgetStyleSheet()
 {
 	// mainly to execute changes in the config file 
-	fontColour=QColor(fontColourName);
+	fontColour=QColor(currFontColourName);
 	dimFontColour=fontColour.darker((int) (100*100/dimLevel));
 	QString txtColour;
 	txtColour.sprintf("color:rgba(%d,%d,%d,255)",

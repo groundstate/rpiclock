@@ -233,7 +233,7 @@ private:
 		int integratedLightLevel;
 		int integrationPeriod;
 		
-		QString fontColourName;
+		QString currFontColourName;
 		QColor  fontColour;
 		QColor  dimFontColour;
 		QImage *dimImage;

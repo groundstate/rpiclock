@@ -1,8 +1,19 @@
 Installation
 ------------
 
-You will need to install Qt4 development packages.
-On the Raspberry Pi, run:
+You will need to install Qt development packages.
+
+For Qt5, on the Raspberry Pi,run:
+
+    sudo apt-get update
+	sudo apt-get install qtbase5-dev qt5-default
+
+and then, in the `rpiclock` source directory:
+
+    qmake rpiclock.pro
+	make
+	
+For Qt4, on the Raspberry Pi, run:
 
 	sudo apt-get update
 	sudo apt-get install qt4-dev-tools
@@ -12,7 +23,9 @@ and then, in the `rpiclock` source directory:
 	qmake-qt4 rpiclock.pro
 	make
 
-You need ntpd `running` and synchronised.
+
+	
+You need ntpd `running` and synchronised, unless you disable checking of the time.
 Make sure that `/etc/ntp.conf` allows ntp queries via the local interface:
 
 	restrict 127.0.0.1
@@ -20,6 +33,8 @@ Make sure that `/etc/ntp.conf` allows ntp queries via the local interface:
 	
 Setting up a Raspberry Pi 
 -------------------------
+
+If X is not started automatically (eg Debian 7 systems) you will need to do the following.
 
 Assuming the user pi is running `rpiclock`:
 
@@ -50,7 +65,7 @@ which contains
 	Exec=/path/to/rpiclock
 
 to automatically run `rpiclock`.
-
+You may need to create the autostart directory.
 
 Startup on system boot is a bit slow. The kernel will not declare "synchronised" until about 15 minutes after boot
 so the time will not be displayed during this period. This is a bit pernickety but I have an aversion to displaying

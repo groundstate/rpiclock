@@ -47,7 +47,8 @@ class PowerManager
 		void setOnTime(QTime &);
 		void setOffTime(QTime &);
 		void setOverrideTime(int);
-		
+		void setXWindowsVT(int);
+        
 		void setPolicy(int);
 		void deviceEvent();
 		
@@ -66,7 +67,7 @@ class PowerManager
 		int powerState;
 		
 		int videoTool;
-
+        int XWindowsVT; // VT X windows runs on (RPi only)
 };
 
 #endif

@@ -43,7 +43,7 @@ PowerManager::PowerManager(QTime &on,QTime &off):
 	enabled=true;
 	powerState=PowerSaveInactive;
 	overrideTime = 30;
-	
+	XWindowsVT = 7; // RPi, Debian 10
 	// Detect power management tool
 	
 	// Raspberry Pi
@@ -151,6 +151,15 @@ void PowerManager::setOverrideTime(int t)
 	overrideTime=t;
 }
 
+// This is a kludge on a kludge
+// On Raspbian, the X server needs to be kicked to wake up after the monitor
+// is turned back on. On Debian 7, the VT was 2, on Debian 10, the VT is 7
+// Easiest thing to do is make it an option
+void PowerManager::setXWindowsVT(int vt)
+{
+    XWindowsVT=vt;
+}
+
 void PowerManager::deviceEvent()
 {
 	// Device events turn the power back on tenporarily if the power is off
@@ -203,7 +212,7 @@ void PowerManager::displayOn()
 			pwr.start("sudo chvt 1"); // this is black magic to kick the xserver back to life
 			pwr.waitForStarted();
 			pwr.waitForFinished();
-			pwr.start("sudo chvt 2");
+			pwr.start("sudo chvt " + QString::number(XWindowsVT));
 			pwr.waitForStarted();
 			pwr.waitForFinished();
 			break;

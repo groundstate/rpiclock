@@ -84,6 +84,8 @@
   <off>17:30:00</off>
   <!-- number of minutes that a keypress or mouse event etc will override power saving -->
   <overridetime>60</overridetime>
+  <!-- virtual terminal that X windows runs on. This is only used on RPi and is a kludge to kick the X server -->
+  <xwinvt>7</xwinvt>
  </power>
  
  <dimming>

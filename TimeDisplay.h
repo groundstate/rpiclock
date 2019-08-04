@@ -127,78 +127,78 @@ private slots:
 		
 private:
 
-		void setDefaults();
+    void setDefaults();
 		
     void createActions();
     void updateActions();
 
     void showTime(QDateTime &);
     void showDate(QDateTime &);
-		void forceUpdate();
+    void forceUpdate();
 		
-		void updateDimState();
-		void updatePPSState();
+    void updateDimState();
+    void updatePPSState();
 		
     void setTODFontSize();
     void setDateFontSize();
     void setTitleFontSize();
-		void setCalTextFontSize();
-		void setImageCreditFontSize();
+    void setCalTextFontSize();
+    void setImageCreditFontSize();
 		
-		void setConfig(QString,QString);
+    void setConfig(QString,QString);
 		
     void fetchLeapSeconds();
     void readLeapFile();
 		
-		void checkConfigFile();
-		void setWidgetStyleSheet();
-		void setLogoImages();
-		
-		void	writeNTPDatagram();
+    void checkConfigFile();
+    void setWidgetStyleSheet();
+    void setLogoImages();
+    
+    void	writeNTPDatagram();
 		
     bool readConfig(QString s);
-		void readBackgroundConfig(QDomElement);
+    void readBackgroundConfig(QDomElement);
 		
-		void setBackgroundFromCalendar();
-		void setBackgroundFromSlideShow();
+    void setBackgroundFromCalendar();
+    void setBackgroundFromSlideShow();
     void updateBackgroundImage(bool force = false);
 		
-		QString pickCalendarImage();
-		QString pickSlideShowImage();
+    QString pickCalendarImage();
+    QString pickSlideShowImage();
 		
-		QString makeImageInfo(QString &);
+    QString makeImageInfo(QString &);
 		
-		QDateTime currentDateTime();
+    QDateTime currentDateTime();
 		
     PowerManager   *powerManager;
 
-		QDomDocument doc;
+    QDomDocument doc;
 		
-		QString configFile;
-		QDateTime configLastModified;
+    QString configFile;
+    QDateTime configLastModified;
 		
-		bool autoUpdateLeapFile;
-		QString leapFileURL;
-		QString proxyServer;
-		int     proxyPort;
-		QString proxyUser;
-		QString proxyPassword;
+    bool autoUpdateLeapFile;
+    QString leapFileURL;
+    QString proxyServer;
+    int     proxyPort;
+    QString proxyUser;
+    QString proxyPassword;
     int leapSeconds; // the current value
     QDateTime leapFileExpiry;
     QDateTime lastLeapFileFetch;
-		QDateTime leapFileLastModified;
-		int leapFileCheckInterval;
+    QDateTime leapFileLastModified;
+    int leapFileCheckInterval;
     QString leapFile;
     bool leapsInitialized;
     QList<LeapInfo *> leapTable;
 
-		int displayDelay;
-		int wakeupTime;
-		bool checkSync;
-		QUdpSocket *ntpSocket;
-		QDateTime  lastNTPReply;
-		int syncLossThreshold; // in seconds
-		bool syncOK;
+    int displayDelay;
+    int wakeupTime;
+    bool checkSync;
+    QUdpSocket *ntpSocket;
+    QDateTime  lastNTPReply;
+    int syncLossThreshold; // in seconds
+    bool syncOK;
 		
     int timeScale;
     int TODFormat;
@@ -208,7 +208,7 @@ private:
 
     QString localTimeBanner,UTCBanner,UnixBanner,GPSBanner,BeforeCountdownBanner,AfterCountdownBanner;
 		
-		QDateTime countdownDateTime;
+    QDateTime countdownDateTime;
 		
     bool blinkSeparator;
     int  blinkDelay;
@@ -216,64 +216,64 @@ private:
     QString defaultImage; // the default image
     QString currentImage;
     QString logoImage;
-		int slideshowPeriod; // in hours
+    int slideshowPeriod; // in hours
 		
-		//
-		bool checkPPS;
-		int  ppsDeviceNumber;
-		bool ppsOK;
+    //
+    bool checkPPS;
+    int  ppsDeviceNumber;
+    bool ppsOK;
 		
-		//
-		bool dimEnable;
-		int  dimMethod;
-		int  dimLevel;
-		bool dimActive;
-		QString lightLevelFile;
-		int  dimThreshold;
-		int integratedLightLevel;
-		int integrationPeriod;
+    //
+    bool dimEnable;
+    int  dimMethod;
+    int  dimLevel;
+    bool dimActive;
+    QString lightLevelFile;
+    int  dimThreshold;
+    int integratedLightLevel;
+    int integrationPeriod;
 		
-		QString currFontColourName;
-		QColor  fontColour;
-		QColor  dimFontColour;
-		QImage *dimImage;
-		QImage *dimLogo;
-		bool autoAdjustFontColour;
-		QString lightBkFontColourName,darkBkFontColourName;
-		QColor  lightBkFontColour,darkBkFontColour;
-		bool adjustFontColour;
+    QString currFontColourName;
+    QColor  fontColour;
+    QColor  dimFontColour;
+    QImage *dimImage;
+    QImage *dimLogo;
+    bool autoAdjustFontColour;
+    QString lightBkFontColourName,darkBkFontColourName;
+    QColor  lightBkFontColour,darkBkFontColour;
+    bool adjustFontColour;
 		
     int backgroundMode;
     QList<CalendarItem *> calendarItems;
     QString imagePath;
-		QString calItemText;
-		QDateTime lastBackgroundCheck;
-		QDateTime nextSlideUpdate; 
+    QString calItemText;
+    QDateTime lastBackgroundCheck;
+    QDateTime nextSlideUpdate; 
     bool fullScreen;
-		bool showImageInfo;
+    bool showImageInfo;
 		
-		// Track a few things which might change if the config file is re-read
-		bool logoChanged;
-		bool backgroundChanged;
+    // Track a few things which might change if the config file is re-read
+    bool logoChanged;
+    bool backgroundChanged;
 		
     QNetworkAccessManager *netManager;
     QTimer  *updateTimer;
     QLabel  *bkground,*title,*tod,*date,*logo,*img,*calText,*imageInfo;
-		QWidget *logoParentWidget;
+    QWidget *logoParentWidget;
     QAction *toggleFullScreenAction;
-		QAction *localTimeAction,*UnixTimeAction,*GPSTimeAction,*UTCTimeAction,*CountdownTimeAction;
+    QAction *localTimeAction,*UnixTimeAction,*GPSTimeAction,*UTCTimeAction,*CountdownTimeAction;
     QAction *twelveHourFormatAction,*twentyFourHourFormatAction;
     QAction *sepBlinkingOnAction,*HHMMSSFormatAction,*HHMMFormatAction;
     QAction *powerManAction;
-		QAction *saveSettingsAction;
+    QAction *saveSettingsAction;
     QAction *quitAction;
 
     QActionGroup *hourFormatActionGroup,*TODFormatActionGroup;
 
     QAction *testLeap;
-		QAction *offsetTime;
+    QAction *offsetTime;
 		
-		int timeOffset; // in minutes
+    int timeOffset; // in minutes
 };
 
 #endif

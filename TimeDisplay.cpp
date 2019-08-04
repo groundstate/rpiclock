@@ -297,12 +297,15 @@ TimeDisplay::TimeDisplay(QStringList &args):QWidget()
          this, SLOT(replyFinished(QNetworkReply*)));
 	
 	ntpSocket = new QUdpSocket(this);
-  ntpSocket->bind(0); // get a random port
+    ntpSocket->bind(0); // get a random port
 	connect(ntpSocket, SIGNAL(readyRead()), this, SLOT(readNTPDatagram()));
 	lastNTPReply = lastLeapFileFetch;
 	syncOK=false;
 						 
 	updateTimer = new QTimer(this);
+    #if QT_VERSION >= 0x050000
+    updateTimer->setTimerType(Qt::PreciseTimer);
+    #endif
 	connect(updateTimer,SIGNAL(timeout()),this,SLOT(updateTime()));
 	QDateTime now = currentDateTime();
 	updateTimer->start(wakeupTime-now.time().msec()); // don't try to get the first blink right
@@ -330,6 +333,7 @@ void 	TimeDisplay::mousePressEvent (QMouseEvent *ev )
 	
 void TimeDisplay::updateTime()
 {
+
 	
 	if (adjustFontColour && autoAdjustFontColour){
 		QTime t;
@@ -1037,6 +1041,7 @@ void TimeDisplay::showDate(QDateTime & now)
 		if (dateFormat & PrettyDate){
 			s.append(sep);
 			s.append(tmpdt.toString("dd MMM yyyy"));
+            s.remove('.'); // kludge Qt5 is adding a period after month name. Locale?
 			sep=" ";
 		}
 		if (dateFormat & MJD){
@@ -1449,6 +1454,10 @@ bool TimeDisplay::readConfig(QString s)
 				{
 					powerManager->setOverrideTime(celem.text().toInt());
 				}
+				else if (celem.tagName() == "xwinvt")
+				{
+					powerManager->setXWindowsVT(celem.text().toInt());
+				}
 				celem=celem.nextSiblingElement();
 			}
 		}
@@ -1650,7 +1659,7 @@ void TimeDisplay::setLogoImages()
 
 void	TimeDisplay::writeNTPDatagram()
 {
-	char pkt[48] = { 
+	unsigned char pkt[48] = { 
 		0xe3, 0x00, 0x04, 0xfa, 
 		0x00, 0x01, 0x00, 0x00, 
 		0x00, 0x01, 0x00, 0x00, 
@@ -1664,7 +1673,7 @@ void	TimeDisplay::writeNTPDatagram()
 		0x00, 0x00, 0x00, 0x00, 
 		0x00, 0x00, 0x00, 0x00};
 
-	if (ntpSocket->writeDatagram(pkt, sizeof(pkt), QHostAddress::LocalHost, 123) != sizeof(pkt)) {
+	if (ntpSocket->writeDatagram((char *) pkt, sizeof(pkt), QHostAddress::LocalHost, 123) != sizeof(pkt)) {
 		qDebug() << "ntpSocket error " << ntpSocket->errorString();
 	}
 }

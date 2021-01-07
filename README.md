@@ -97,4 +97,4 @@ The power on/power off logic assumes on < off.
 Website
 -------
 
-There's a bit more information and screenshots at [ninepointtwoghz.org](http://ninepointtwoghz.org/rpiclock.php)
+There's a bit more information and screenshots at [ninepointtwoghz.org](http://ninepointtwoghz.org/scripts/rpiclock.php)

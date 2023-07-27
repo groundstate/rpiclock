@@ -43,22 +43,36 @@ PowerManager::PowerManager(QTime &on,QTime &off):
 	enabled=true;
 	powerState=PowerSaveInactive;
 	overrideTime = 30;
-	XWindowsVT = 7; // RPi, Debian 10
+	videoToolCmd = "";
+	
 	// Detect power management tool
 	
-	// Raspberry Pi
-	QFileInfo vc = QFileInfo("/opt/vc/bin/tvservice");
 	videoTool = Unknown;
+	
+	QFileInfo vc = QFileInfo("/usr/bin/tvservice"); // RPi Ubuntu?
 	if (vc.exists()){
 		videoTool=RaspberryPi;
+		videoToolCmd = "/usr/bin/tvservice";
 	}
-	else // Conventional Video BIOS
-	{	
-		vc.setFile("/usr/bin/xset");
+	
+	if (Unknown == videoTool){
+		vc.setFile("/opt/vc/bin/tvservice"); // RPi Raspbian ?
 		if (vc.exists()){
-			videoTool=XSet;
+			videoTool=RaspberryPi;
+			videoToolCmd = "/opt/vc/bin/tvservice";
 		}
 	}
+	
+	if (Unknown == videoTool){
+		vc.setFile("/usr/bin/xset"); // Conventional Video BIOS
+		if (vc.exists()){
+			videoTool=XSet;
+			videoToolCmd = "/usr/bin/xset";
+		}
+	}
+	
+	qDebug() << "Video tool command = " << videoToolCmd;
+	
 	disableOSPowerManagment();
 	
 }
@@ -154,7 +168,8 @@ void PowerManager::setOverrideTime(int t)
 // This is a kludge on a kludge
 // On Raspbian, the X server needs to be kicked to wake up after the monitor
 // is turned back on. On Debian 7, the VT was 2, on Debian 10, the VT is 7
-// Easiest thing to do is make it an option
+// Ubuntu 22 VT is 2?
+// Configured in setup file
 void PowerManager::setXWindowsVT(int vt)
 {
     XWindowsVT=vt;
@@ -206,10 +221,10 @@ void PowerManager::displayOn()
 	switch (videoTool)
 	{
 		case RaspberryPi:
-			pwr.start("/opt/vc/bin/tvservice -p");
+			pwr.start(videoToolCmd + " -p");
 			pwr.waitForStarted();
 			pwr.waitForFinished();
-			pwr.start("sudo chvt 1"); // this is black magic to kick the xserver back to life
+			pwr.start("sudo chvt 1"); // this is black magic to kick the xserver back to life - may need to allow this command without password in sudoers
 			pwr.waitForStarted();
 			pwr.waitForFinished();
 			pwr.start("sudo chvt " + QString::number(XWindowsVT));
@@ -243,7 +258,7 @@ void PowerManager::displayOff()
 	switch (videoTool)
 	{
 		case RaspberryPi:
-			pwr.start("/opt/vc/bin/tvservice -o");
+			pwr.start(videoToolCmd + " -o");
 			break;
 		case XSet:
 			pwr.start("xset dpms force off");

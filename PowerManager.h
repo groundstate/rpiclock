@@ -67,7 +67,8 @@ class PowerManager
 		int powerState;
 		
 		int videoTool;
-        int XWindowsVT; // VT X windows runs on (RPi only)
+		QString videoToolCmd;
+		int XWindowsVT; // VT X windows runs on (RPi only)
 };
 
 #endif
